@@ -18,6 +18,32 @@ import {
   validateComposeContainerIdentities,
 } from './onprem-keycloak-runtime-proof.mjs'
 
+test('auth proof diagnostics preserve only exact static failures and bounded response categories', () => {
+  const cases = [
+    ['Keycloak browser title does not match Axis Lufian', 'browser-title'],
+    ['Keycloak browser icon does not match the original logo', 'browser-icon-content'],
+    ['Keycloak login form was not rendered', 'login-form-missing'],
+    ['OIDC access token canonical basic scope contract failed', 'token-basic-scope'],
+    ['authorization endpoint rejected request (scope-rejected)', 'authorization-entry-scope-rejected'],
+    ['Keycloak login did not return an authorization code (credentials-rejected)', 'login-code-credentials-rejected'],
+    ['OIDC token exchange returned 400', 'token-exchange-400'],
+  ]
+  for (const [message, phase] of cases) {
+    const stderr = `on-prem Keycloak auth proof: ${message}`
+    assert.deepEqual(classifyKeycloakBootstrapDiagnostic({ status: 1, stderr }), {
+      category: 'auth-contract', phase, exitCode: 1, signal: null,
+    })
+    for (const unsafe of [
+      `${stderr}; password=synthetic-sensitive-detail`,
+      `${stderr}\non-prem Keycloak auth proof: unknown error`,
+      `${stderr}\n${stderr}`,
+      stderr.replace(message, 'OIDC token exchange returned 999'),
+    ]) {
+      assert.equal(classifyKeycloakBootstrapDiagnostic({ status: 1, stderr: unsafe }).category, 'generic-failed-closed')
+    }
+  }
+})
+
 test('Keycloak authorization success is derived only from the full validated auth receipt', () => {
   const valid = {
     schemaVersion: 1,

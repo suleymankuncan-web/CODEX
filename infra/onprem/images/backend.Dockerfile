@@ -1,4 +1,4 @@
-FROM node:24-trixie-slim@sha256:0711b541c1c33a8a530ac4f0d391baa9a15b3d804695b1b24a47daa5fb60e74d AS dependencies
+FROM node:24-trixie-slim@sha256:8ec5d7557396cfe32d21c3f9c13072355ceab22b584578ca4bb28af31120cffe AS dependencies
 
 WORKDIR /workspace/backend
 COPY backend/nestjs/package*.json ./
@@ -21,7 +21,7 @@ RUN npm prune --omit=dev \
   && find dist -type f \( -name '*.ts' -o -name '*.tsx' -o -name '*.map' -o -name '*.spec.js' -o -name '*.test.js' -o -name '*-test-helpers.js' \) -delete \
   && find dist -type d \( -iname 'test' -o -iname 'tests' -o -iname '__tests__' -o -iname 'spec' -o -iname 'specs' -o -iname 'evidence' -o -iname 'coverage' -o -iname '.cache' -o -iname 'cache' -o -iname 'build' -o -iname 'docs' -o -iname 'examples' \) -prune -exec rm -rf {} +
 
-FROM gcr.io/distroless/nodejs24-debian13:nonroot@sha256:fbbdda866ea71aef98c4abece17e3d61fbf820cc2ef3961522caa2478716171a AS runtime
+FROM gcr.io/distroless/nodejs24-debian13:nonroot@sha256:9eeb7f5887d0e239e78264b06f7f11d2e14be534050481803a9e4728fcdd278e AS runtime
 
 ARG SOURCE_REVISION=synthetic-unknown
 ARG BUILD_VERSION=onprem-unknown

@@ -28,6 +28,7 @@ const treeSha = 'b'.repeat(40)
 const ISOLATED_PROOF_WORKSPACE_FILES = [
   '.github/workflows/onprem-image-proof.yml',
   'scripts/onprem-image-local-proof.mjs',
+  'scripts/onprem-image-upload-contract.mjs',
   'scripts/onprem-image-local-proof-recovery.mjs',
   'scripts/onprem-native-docker-host.mjs',
 ]

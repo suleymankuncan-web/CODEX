@@ -1,14 +1,19 @@
 import { createHash } from 'node:crypto'
-import { readFileSync, statSync, writeFileSync } from 'node:fs'
+import { lstatSync, readFileSync, realpathSync, statSync, writeFileSync } from 'node:fs'
+import { join, relative, isAbsolute } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const FORBIDDEN = /(?:NOASSERTION|UNKNOWN|UNLICENSED|PROPRIETARY|NONCOMMERCIAL|NON-COMMERCIAL|SSPL|BUSL|COMMONS[ -]CLAUSE|POLYFORM-NONCOMMERCIAL)/i
 const MISSING_LICENSE = /^(?:NONE|NOASSERTION|UNKNOWN)$/i
 const LICENSE_REF = /LicenseRef-/i
 
+const additionalLicensePolicy = JSON.parse(readFileSync(new URL('../infra/onprem/images/keycloak-embedded-license-policy-v1.json', import.meta.url), 'utf8'))
+
 export const ANGUS_EMBEDDED_LICENSE_POLICY = Object.freeze({
-  expectedPackageCount: 556,
+  expectedPackageCount: 565,
   maxUnresolvedCount: 455,
+  additionalEmbeddedLicenses: additionalLicensePolicy.components,
+  additionalEmbeddedLicenseBaseImage: additionalLicensePolicy.baseImage,
   requireFirstPartyRoot: true,
   requireExactAngusPair: true,
   allowedSpdxLicenseIds: Object.freeze([
@@ -62,10 +67,12 @@ function parseArgs(argv) {
     else if (arg === '--angus-source-jar') options.angusSourceJar = argv[++index]
     else if (arg === '--angus-license') options.angusLicense = argv[++index]
     else if (arg === '--angus-notice') options.angusNotice = argv[++index]
+    else if (arg === '--keycloak-rootfs') options.keycloakRootfs = argv[++index]
+    else if (arg === '--embedded-evidence-dir') options.embeddedEvidenceDir = argv[++index]
     else if (arg === '--output') options.output = argv[++index]
     else throw new Error(`unknown argument: ${arg}`)
   }
-  for (const name of ['sbom', 'inventory', 'licenseText', 'licensePaths', 'licenseBundle', 'angusSourceJar', 'angusLicense', 'angusNotice', 'output']) if (!options[name]) throw new Error(`--${name} is required`)
+  for (const name of ['sbom', 'inventory', 'licenseText', 'licensePaths', 'licenseBundle', 'angusSourceJar', 'angusLicense', 'angusNotice', 'keycloakRootfs', 'embeddedEvidenceDir', 'output']) if (!options[name]) throw new Error(`--${name} is required`)
   return options
 }
 
@@ -196,13 +203,60 @@ function verifiedAngusEvidence(packages, options, policy) {
   return new Map([[possibleCores[0], boundEvidence], [possibleSiblings[0], boundEvidence]])
 }
 
+function verifiedAdditionalEmbeddedEvidence(packages, options, policy, inventory, licensePaths) {
+  const result = new Map()
+  const expectedComponents = policy.additionalEmbeddedLicenses ?? []
+  if (!Array.isArray(expectedComponents)) throw new Error('additional embedded license policy must be an array')
+  if (expectedComponents.length === 0) return result
+  if (inventory.baseImage !== policy.additionalEmbeddedLicenseBaseImage) throw new Error('additional embedded license base image mismatch')
+  const readBoundFile = (root, pathname, label, expectedHash) => {
+    if (!root || lstatSync(root).isSymbolicLink() || !lstatSync(root).isDirectory()) throw new Error(`unsafe ${label} evidence root`)
+    const rel = relative(realpathSync(root), realpathSync(pathname))
+    if (rel === '..' || rel.startsWith('../') || isAbsolute(rel) || lstatSync(pathname).isSymbolicLink() || !lstatSync(pathname).isFile()) throw new Error(`unsafe ${label} evidence path`)
+    if (sha256(pathname) !== expectedHash) throw new Error(`${label} sha256 mismatch`)
+  }
+  const seen = new Set()
+  for (const expected of expectedComponents) {
+    if (seen.has(expected.purl)) throw new Error('duplicate additional embedded license policy purl')
+    seen.add(expected.purl)
+    const candidates = packages.filter((pkg) => String(pkg?.name ?? '').trim() === expected.name || packagePurls(pkg).includes(expected.purl))
+    if (candidates.length !== 1 || !exactPackage(candidates[0], expected, expected.sourceInfo)) throw new Error(`exact additional embedded component identity is required: ${expected.purl}`)
+    if (!/^\/opt\/keycloak\/lib\/lib\/(?:main|deployment)\/[A-Za-z0-9._-]+\.jar$/.test(expected.sourceJarPath)
+      || expected.sourceInfo !== `acquired package info from installed java archive: ${expected.sourceJarPath}`
+      || !/^[A-Za-z0-9._-]+$/.test(expected.name) || !/^[A-Za-z0-9._-]+$/.test(expected.version)
+      || !/^[a-f0-9]{64}$/.test(expected.sourceJarSha256)
+      || !Array.isArray(expected.entries) || expected.entries.length === 0) throw new Error('unsafe additional embedded license policy')
+    assertKnownSpdxExpression(expected.resolvedLicense, new Set(policy.allowedSpdxLicenseIds), expected.purl)
+    readBoundFile(options.keycloakRootfs, join(options.keycloakRootfs ?? '', expected.sourceJarPath.slice(1)), 'additional source JAR', expected.sourceJarSha256)
+    const seenEntries = new Set()
+    for (const entry of expected.entries) {
+      if (!/^(?:META-INF\/)?(?:LICENSE|NOTICE)$/.test(entry.path) || !/^[a-f0-9]{64}$/.test(entry.sha256) || seenEntries.has(entry.path)) throw new Error('unsafe additional embedded license entry')
+      seenEntries.add(entry.path)
+      if (!licensePaths.includes(`${expected.sourceJarPath.slice(1)}!/${entry.path}`)) throw new Error('additional embedded license path evidence is missing')
+      const pathname = join(options.embeddedEvidenceDir ?? '', 'embedded-jars', `${expected.name}-${expected.version}`, entry.path)
+      readBoundFile(options.embeddedEvidenceDir, pathname, 'additional license evidence', entry.sha256)
+    }
+    result.set(candidates[0], {
+      license: expected.resolvedLicense,
+      evidence: {
+        type: 'embedded-jar-license', sourcePurl: expected.purl,
+        sourceJar: { path: expected.sourceJarPath, sha256: expected.sourceJarSha256 },
+        entries: expected.entries,
+      },
+    })
+  }
+  return result
+}
+
 export function reconcileKeycloakLicenses(options, angusPolicy = ANGUS_EMBEDDED_LICENSE_POLICY) {
   const sbom = readJson(options.sbom, 'Keycloak SBOM')
   const inventory = readJson(options.inventory, 'Keycloak license inventory')
   if (!Array.isArray(sbom.packages) || sbom.packages.length === 0) throw new Error('Keycloak SBOM packages are required')
   if (inventory.dataClass !== 'synthetic' || typeof inventory.image !== 'string' || typeof inventory.baseImage !== 'string' || !/^sha256:[a-f0-9]{64}$/i.test(String(inventory.imageId ?? ''))) throw new Error('Keycloak license inventory identity is incomplete')
   if (inventory.packageCount !== sbom.packages.length) throw new Error('Keycloak license inventory package count does not match SBOM')
-  if (!Number.isInteger(angusPolicy.expectedPackageCount) || sbom.packages.length !== angusPolicy.expectedPackageCount) throw new Error('Keycloak pinned SBOM package count mismatch')
+  if (!Number.isInteger(angusPolicy.expectedPackageCount) || sbom.packages.length !== angusPolicy.expectedPackageCount) {
+    throw new Error(`Keycloak pinned SBOM package count mismatch: observed ${sbom.packages.length}; expected ${angusPolicy.expectedPackageCount}`)
+  }
   const licenseText = readFileSync(options.licenseText, 'utf8').trim()
   const licensePaths = readFileSync(options.licensePaths, 'utf8').split(/\r?\n/).map((line) => line.trim()).filter(Boolean)
   if (!statSync(options.licenseBundle).isFile() || statSync(options.licenseBundle).size === 0) throw new Error('Keycloak bundled license evidence is empty')
@@ -210,6 +264,7 @@ export function reconcileKeycloakLicenses(options, angusPolicy = ANGUS_EMBEDDED_
   if (licensePaths.length === 0 || !licensePaths.some((path) => /(?:^|\/)(?:LICENSE|NOTICE)(?:\.[^/]*)?$/i.test(path))) throw new Error('Keycloak license/notice path evidence is incomplete')
   const angusEvidence = verifiedAngusEvidence(sbom.packages, options, angusPolicy)
   if (angusPolicy.requireExactAngusPair && angusEvidence.size !== 2) throw new Error('exact Angus evidence resolution count must be 2')
+  const additionalEvidence = verifiedAdditionalEmbeddedEvidence(sbom.packages, options, angusPolicy, inventory, licensePaths)
   const blankSourcePackages = sbom.packages.filter((pkg) => !String(pkg?.sourceInfo ?? '').trim())
   if (angusPolicy.requireFirstPartyRoot && (blankSourcePackages.length !== 1 || !isVerifiedFirstPartyRoot(blankSourcePackages[0], inventory))) {
     throw new Error('Keycloak SBOM must contain exactly one immutable first-party image root and no other blank sourceInfo')
@@ -254,6 +309,9 @@ export function reconcileKeycloakLicenses(options, angusPolicy = ANGUS_EMBEDDED_
         classification: 'resolved-embedded-jar',
         evidence: exactAngusEvidence,
       }
+    }
+    if (additionalEvidence.has(pkg)) {
+      return { ...identity, ...additionalEvidence.get(pkg), classification: 'resolved-embedded-jar' }
     }
     if (firstPartyRoot) {
       return {

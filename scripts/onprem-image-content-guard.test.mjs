@@ -334,16 +334,30 @@ test('content guard rejects traversal roots instead of silently skipping Keycloa
   }
 })
 
-test('Keycloak approved-content classifier requires the exact CI path and SHA-256 pair', () => {
+test('Keycloak approved-content classifier pins the exact 26.8.0 embedded JAR paths and SHA-256 pairs', () => {
   const entries = Object.entries(KEYCLOAK_APPROVED_CONTENT_HASHES)
+  const expectedJarPaths = [
+    'opt/keycloak/lib/lib/deployment/io.quarkus.quarkus-arc-test-supplement-3.40.1.jar',
+    'opt/keycloak/lib/lib/deployment/io.quarkus.quarkus-arc-test-supplement-decorator-3.40.1.jar',
+    'opt/keycloak/lib/lib/deployment/io.quarkus.quarkus-credentials-deployment-3.40.1.jar',
+    'opt/keycloak/lib/lib/main/io.quarkus.quarkus-credentials-3.40.1.jar',
+    'opt/keycloak/lib/lib/main/io.smallrye.certs.smallrye-private-key-pem-parser-0.9.4.jar',
+    'opt/keycloak/lib/lib/main/org.keycloak.keycloak-model-storage-private-26.8.0.jar',
+    'opt/keycloak/lib/lib/main/org.keycloak.keycloak-server-spi-private-26.8.0.jar',
+    'opt/keycloak/lib/lib/main/org.wildfly.security.wildfly-elytron-credential-2.9.2.SP1.jar',
+    'opt/keycloak/lib/lib/main/org.wildfly.security.wildfly-elytron-password-impl-2.9.2.SP1.jar',
+  ]
   assert.equal(entries.length, 14)
+  for (const pathname of expectedJarPaths) assert.match(KEYCLOAK_APPROVED_CONTENT_HASHES[pathname] ?? '', /^[a-f0-9]{64}$/)
+  assert.equal(entries.some(([pathname]) => /26\.7\.3|3\.33\.3\.1|0\.9\.3|2\.8\.4\.Final/.test(pathname)), false)
   for (const [pathname, sha256] of entries) {
     assert.equal(typeof classifyKeycloakApprovedContent(pathname, sha256), 'string')
-    assert.equal(classifyKeycloakApprovedContent(pathname, `${sha256.slice(0, -1)}0`), null)
+    const wrongSha256 = `${sha256.slice(0, -1)}${sha256.endsWith('0') ? '1' : '0'}`
+    assert.equal(classifyKeycloakApprovedContent(pathname, wrongSha256), null)
     assert.equal(classifyKeycloakApprovedContent(pathname.replace(/\.jar$|\.pem$|\.crt$|\.template$|\.ftl$/, ''), sha256), null)
   }
   assert.equal(
-    classifyKeycloakApprovedContent('opt/keycloak/lib/lib/main/io.quarkus.quarkus-credentials-3.33.2.1.jar', entries[0][1]),
+    classifyKeycloakApprovedContent('opt/keycloak/lib/lib/main/io.quarkus.quarkus-credentials-3.40.0.jar', entries[0][1]),
     null,
   )
 })

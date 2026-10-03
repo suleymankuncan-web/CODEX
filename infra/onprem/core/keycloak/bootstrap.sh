@@ -588,6 +588,40 @@ else
 fi
 [ -n "$client_uuid" ] || die 'browser client id was not resolved'
 
+# Client audiences now require a registered, enabled target. The API accepts
+# JWTs only; this client must never acquire login or token-issuance flows.
+# Verify existing identities without re-enabling or rewriting a disabled client.
+reconcile_api_audience_client() {
+  api_client_id='store-ops-api'
+  api_client_rows="$(kcadm_query get clients -r "$realm" -q "clientId=$api_client_id" --fields id,clientId --format csv --noquotes 2>/dev/null)" || die 'API audience inventory read failed'
+  api_client_matches="$(printf '%s\n' "$api_client_rows" | csv_first_fields_matching_second "$api_client_id")"
+  api_client_count="$(printf '%s\n' "$api_client_matches" | sed '/^[[:space:]]*$/d' | wc -l | tr -d ' ')"
+  case "$api_client_count" in
+    0)
+      api_client_file="$tmp_dir/api-audience-client.json"
+      cat > "$api_client_file" <<'JSON'
+{"clientId":"store-ops-api","name":"HR Axis API audience","enabled":true,"protocol":"openid-connect","publicClient":false,"bearerOnly":true,"standardFlowEnabled":false,"implicitFlowEnabled":false,"directAccessGrantsEnabled":false,"serviceAccountsEnabled":false,"fullScopeAllowed":false,"redirectUris":[],"webOrigins":[],"defaultClientScopes":[],"optionalClientScopes":[]}
+JSON
+      kcadm_quiet create clients -r "$realm" -f "$api_client_file" || die 'API audience client creation failed'
+      api_client_rows="$(kcadm_query get clients -r "$realm" -q "clientId=$api_client_id" --fields id,clientId --format csv --noquotes 2>/dev/null)" || die 'API audience inventory read failed'
+      api_client_matches="$(printf '%s\n' "$api_client_rows" | csv_first_fields_matching_second "$api_client_id")"
+      api_client_count="$(printf '%s\n' "$api_client_matches" | sed '/^[[:space:]]*$/d' | wc -l | tr -d ' ')"
+      ;;
+    1) ;;
+    *) die 'API audience client identity is ambiguous' ;;
+  esac
+  [ "$api_client_count" -eq 1 ] || die 'API audience client identity is missing or ambiguous'
+  api_client_uuid="$api_client_matches"
+  printf '%s\n' "$api_client_uuid" | grep -Eq '^[A-Fa-f0-9]{8}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{12}$' || die 'API audience client id is invalid'
+  api_client_state="$(kcadm_query get "clients/$api_client_uuid" -r "$realm" --fields id,clientId,enabled,protocol,publicClient,bearerOnly,standardFlowEnabled,implicitFlowEnabled,directAccessGrantsEnabled,serviceAccountsEnabled,fullScopeAllowed,redirectUris,webOrigins,defaultClientScopes,optionalClientScopes 2>/dev/null)" || die 'API audience client parity read failed'
+  api_client_compact="$(printf '%s' "$api_client_state" | tr -d '[:space:]')"
+  for api_client_field in '"id":"'"$api_client_uuid"'"' '"clientId":"store-ops-api"' '"enabled":true' '"protocol":"openid-connect"' '"publicClient":false' '"bearerOnly":true' '"standardFlowEnabled":false' '"implicitFlowEnabled":false' '"directAccessGrantsEnabled":false' '"serviceAccountsEnabled":false' '"fullScopeAllowed":false' '"redirectUris":[]' '"webOrigins":[]' '"defaultClientScopes":[]' '"optionalClientScopes":[]'; do
+    printf '%s' "$api_client_compact" | grep -Fq "$api_client_field" || die 'API audience client parity mismatch'
+  done
+  unset api_client_rows api_client_matches api_client_count api_client_state api_client_compact api_client_field
+}
+reconcile_api_audience_client
+
 admin_client_id='hr-axis-identity-lifecycle'
 cat > "$admin_client_file" <<JSON
 {"clientId":"$admin_client_id","name":"HR Axis identity lifecycle","enabled":true,"protocol":"openid-connect","publicClient":false,"bearerOnly":false,"standardFlowEnabled":false,"implicitFlowEnabled":false,"directAccessGrantsEnabled":false,"serviceAccountsEnabled":true,"secret":"$admin_client_secret"}

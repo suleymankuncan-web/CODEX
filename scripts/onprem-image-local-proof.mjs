@@ -14,6 +14,7 @@ import {
 import { createHash } from 'node:crypto'
 import { dirname, basename, isAbsolute, join, relative, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { FULL_PROOF_UPLOAD_CONTRACT, assertExactUploadContract, validateAndStripFailureDiagnostics } from './onprem-image-upload-contract.mjs'
 import {
   acquireVerifiedHost,
   captureFirewallSnapshots,
@@ -63,59 +64,6 @@ const ACTION_STEPS = Object.freeze([
   'Upload sanitized Keycloak runtime receipt',
   'Upload sanitized photo-storage proof and supply-chain evidence',
   'Upload sanitized proof artifacts',
-])
-const FULL_PROOF_UPLOAD_CONTRACT = Object.freeze([
-  Object.freeze({
-    name: 'Upload sanitized runtime receipt',
-    artifactName: 'onprem-core-runtime-proof-${{ github.sha }}',
-    ifNoFilesFound: 'error',
-    paths: Object.freeze(['${{ runner.temp }}/onprem-core-runtime-receipt.json']),
-  }),
-  Object.freeze({
-    name: 'Upload sanitized Keycloak runtime receipt',
-    artifactName: 'onprem-keycloak-runtime-proof-${{ github.sha }}',
-    ifNoFilesFound: 'error',
-    paths: Object.freeze(['${{ runner.temp }}/onprem-keycloak-runtime-receipt.json']),
-  }),
-  Object.freeze({
-    name: 'Upload sanitized photo-storage proof and supply-chain evidence',
-    artifactName: 'onprem-photo-storage-proof-${{ github.sha }}',
-    ifNoFilesFound: 'error',
-    paths: Object.freeze([
-      '${{ runner.temp }}/onprem-photo-storage-runtime-receipt.json',
-      'proof/photo-storage-sbom.spdx.json',
-      'proof/photo-storage-trivy.json',
-      'proof/photo-storage-license-receipt.json',
-    ]),
-  }),
-  Object.freeze({
-    name: 'Upload sanitized proof artifacts',
-    artifactName: 'onprem-image-proof-${{ github.sha }}',
-    ifNoFilesFound: 'error',
-    paths: Object.freeze([
-      'proof/*-content-guard.json',
-      'proof/*-sbom.spdx.json',
-      'proof/*-trivy.json',
-      'proof/*-license-inventory.json',
-      'proof/*-image-license-reconciliation.json',
-      'proof/base-license-evidence/**',
-      'proof/base-license-evidence.tar',
-      'proof/*-THIRD_PARTY_NOTICES.txt',
-      'proof/keycloak-image-manifest.json',
-      'proof/keycloak-LICENSE.txt',
-      'proof/keycloak-license-paths.txt',
-      'proof/keycloak-license-reconciliation.json',
-      'proof/keycloak-license-evidence.tar',
-      'proof/backend-image.tar',
-      'proof/frontend-image.tar',
-      'proof/keycloak-image.tar',
-      'proof/release-manifest.json',
-      'proof/onprem-proof-receipt.json',
-      'proof/content-guard-index.json',
-      'proof/content-guard-index-public.pem',
-      'proof/ephemeral-public.pem',
-    ]),
-  }),
 ])
 const STEP_ENV_KEYS = Object.freeze({
   'Validate full proof inputs and exact checkout': ['EXPECTED_SHA', 'PROOF_MODE', 'IMAGE_SCOPE'],
@@ -285,7 +233,9 @@ function parseStepSection(lines) {
     if (!['run', 'uses', 'if', 'env', 'with', 'id', 'name'].includes(property)) fail(`unsupported workflow step property: ${property}`)
   }
   const condition = lines.find((line) => /^        if:/.test(line))?.replace(/^        if:\s*/, '').trim() ?? null
-  if (condition !== null && !["inputs.proof_mode == 'full'", "inputs.proof_mode == 'full' && github.event_name != 'pull_request'"].includes(condition)) fail(`unsupported workflow condition in ${name}`)
+  const diagnosticCondition = name === 'Upload failed Keycloak license diagnostics'
+    && condition === "failure() && inputs.proof_mode == 'full' && github.event_name != 'pull_request'"
+  if (condition !== null && !diagnosticCondition && !["inputs.proof_mode == 'full'", "inputs.proof_mode == 'full' && github.event_name != 'pull_request'"].includes(condition)) fail(`unsupported workflow condition in ${name}`)
   for (const line of lines) {
     if (!line.includes('${{')) continue
     // Action inputs include runner.temp for upload paths.  They are resolved
@@ -310,29 +260,6 @@ function assertSupportedExpressions(value, allowed = ['inputs.expected_sha', 'in
       }
     }
     if (text.replace(/\$\{\{\s*[^}]+?\s*\}\}/g, '').includes('${{')) fail('malformed GitHub expression')
-  }
-  return true
-}
-
-function assertExactUploadContract(uploads) {
-  if (!Array.isArray(uploads) || uploads.length !== FULL_PROOF_UPLOAD_CONTRACT.length) {
-    fail('full proof upload contract changed')
-  }
-  for (const [index, upload] of uploads.entries()) {
-    const expected = FULL_PROOF_UPLOAD_CONTRACT[index]
-    const actualKeys = isObject(upload) ? Object.keys(upload).sort() : []
-    const expectedKeys = ['artifactName', 'ifNoFilesFound', 'name', 'paths']
-    const keysMatch = actualKeys.length === expectedKeys.length && actualKeys.every((key, keyIndex) => key === expectedKeys[keyIndex])
-    const pathsMatch = Array.isArray(upload?.paths)
-      && upload.paths.length === expected.paths.length
-      && upload.paths.every((path, pathIndex) => path === expected.paths[pathIndex])
-    if (!keysMatch
-      || upload.name !== expected.name
-      || upload.artifactName !== expected.artifactName
-      || upload.ifNoFilesFound !== expected.ifNoFilesFound
-      || !pathsMatch) {
-      fail(`full proof upload contract changed: ${expected.name}`)
-    }
   }
   return true
 }
@@ -363,7 +290,8 @@ function splitStepSections(jobLines) {
 export function extractFullProofPlan(source) {
   assertString(source, 'workflow source', { allowNewlines: true })
   const job = findJobSection(source, 'proof')
-  const parsed = splitStepSections(job).map(parseStepSection)
+  const allSteps = splitStepSections(job).map(parseStepSection)
+  const parsed = validateAndStripFailureDiagnostics(allSteps)
   const names = parsed.map((step) => step.name)
   const duplicate = names.find((name, index) => names.indexOf(name) !== index)
   if (duplicate) fail(`duplicate workflow step: ${duplicate}`)

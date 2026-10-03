@@ -95,7 +95,7 @@ function safeEvidencePath(evidenceDirectory, relativePath, expectedSha256, ident
   if (bytes === 0) throw new Error(`empty license evidence file for ${identity}: ${relativePath}`)
   const digest = sha256(actual)
   if (digest.toLowerCase() !== String(expectedSha256).toLowerCase()) {
-    throw new Error(`license evidence sha256 mismatch for ${identity}: ${relativePath}`)
+    throw new Error(`license evidence sha256 mismatch for ${identity}: ${relativePath}; observed ${digest}; expected ${String(expectedSha256).toLowerCase()}`)
   }
   return { type: 'embedded-file', path: rel, sha256: digest, bytes }
 }
@@ -184,13 +184,17 @@ export function reconcileImageLicenses({ sbom, npmInventory, policy, imageKind, 
     const overrideKey = `${name}\u0000${version}\u0000${purl}`
     const override = overrides.get(overrideKey)
     if (override) {
-      if (override.declaredLicense !== declaredLicense) throw new Error(`declared license mismatch for ${identity}`)
+      if (override.declaredLicense !== declaredLicense) {
+        throw new Error(`declared license mismatch for ${identity}: observed ${declaredLicense}; expected ${override.declaredLicense}`)
+      }
       assertStandardExpression(override.resolvedLicense, allowedIds, identity, { allowLicenseRef: true })
       usedOverrides.add(overrideKey)
       return { name, version, purl, classification: 'base-runtime-override', license: override.resolvedLicense, evidence: overrideEvidence(evidenceRoot, override, identity) }
     }
-    if ([...overrides.keys()].some((key) => key.startsWith(`${name}\u0000${version}\u0000`))) {
-      throw new Error(`license policy purl mismatch for ${identity}`)
+    const matchingOverrideKeys = [...overrides.keys()].filter((key) => key.startsWith(`${name}\u0000${version}\u0000`))
+    if (matchingOverrideKeys.length > 0) {
+      const expectedPurls = matchingOverrideKeys.map((key) => key.split('\u0000')[2]).sort()
+      throw new Error(`license policy purl mismatch for ${identity}: observed ${purl}; expected ${expectedPurls.join(', ')}`)
     }
     const atoms = assertStandardExpression(declaredLicense, allowedIds, identity)
     return { name, version, purl, classification: 'base-runtime-spdx', license: declaredLicense, evidence: { type: 'spdx-expression', ids: atoms } }

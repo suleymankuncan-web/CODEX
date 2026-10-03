@@ -117,9 +117,13 @@ test('evidence proof rejects hash drift, traversal, and ambiguous fields', () =>
   const item = fixture({ customBase: true })
   try {
     const override = item.policy.images.backend.overrides[0]
+    const observedEvidenceSha256 = createHash('sha256').update('custom runtime notice').digest('hex')
     override.evidenceSha256 = '0'.repeat(64)
-    assert.throws(() => reconcile(item), /sha256 mismatch/i)
-    override.evidenceSha256 = createHash('sha256').update('custom runtime notice').digest('hex')
+    assert.throws(
+      () => reconcile(item),
+      (error) => error.message.includes(`observed ${observedEvidenceSha256}`) && error.message.includes(`expected ${'0'.repeat(64)}`),
+    )
+    override.evidenceSha256 = observedEvidenceSha256
     override.evidencePath = '../runtime-lib.txt'
     assert.throws(() => reconcile(item), /unsafe license evidence path/i)
     override.evidencePath = 'runtime-lib.txt'
@@ -151,8 +155,18 @@ test('base digest, package identity, and purl drift fail closed', () => {
     item.sbom.packages[3].versionInfo = '2.0.1'
     assert.throws(() => reconcile(item), /license review|required|unused or stale|purl mismatch/i)
     item.sbom.packages[3].versionInfo = '2.0.0'
-    item.sbom.packages[3].externalRefs = purlRef('pkg:deb/synthetic/spoof@2.0.0')
-    assert.throws(() => reconcile(item), /license review|required|unused or stale|purl mismatch/i)
+    const observedPurl = 'pkg:deb/synthetic/spoof@2.0.0'
+    item.sbom.packages[3].externalRefs = purlRef(observedPurl)
+    assert.throws(
+      () => reconcile(item),
+      (error) => error.message.includes(observedPurl) && error.message.includes('pkg:deb/synthetic/runtime-lib@2.0.0'),
+    )
+    item.sbom.packages[3].externalRefs = purlRef('pkg:deb/synthetic/runtime-lib@2.0.0')
+    item.sbom.packages[3].licenseDeclared = 'Apache-2.0'
+    assert.throws(
+      () => reconcile(item),
+      (error) => error.message.includes('observed Apache-2.0') && error.message.includes('expected NOASSERTION'),
+    )
   } finally {
     rmSync(item.root, { recursive: true, force: true })
   }

@@ -9,6 +9,7 @@ const backendTsconfig = JSON.parse(readFileSync('backend/nestjs/tsconfig.onprem.
 const backendPackage = JSON.parse(readFileSync('backend/nestjs/package.json', 'utf8'))
 const frontendVite = readFileSync('admin-web/vite.config.ts', 'utf8')
 const requiredGateWorkflow = readFileSync('.github/workflows/required-release-gate.yml', 'utf8')
+const baseLicensePolicy = JSON.parse(readFileSync('infra/onprem/images/base-license-policy-v1.json', 'utf8'))
 const sameImageSmoke = workflow
   .split('- name: Start API and worker from the same backend image')[1]
   ?.split('- name: Generate SPDX SBOMs with pinned Syft')[0] ?? ''
@@ -33,6 +34,33 @@ test('ONP-1 images use immutable bases, non-root users, and no source-bearing OC
   }
   assert.doesNotMatch(backendDockerfile, /node_modules[^\n]*-iname 'build'/)
   assert.doesNotMatch(backendDockerfile, /node_modules[^\n]*\*\.txt/)
+})
+
+test('ONP-1 frontend runtime pins the patched Alpine crypto and regex packages before returning to uid 101', () => {
+  assert.match(frontendDockerfile, /USER root\s+RUN apk add --no-cache --upgrade/)
+  assert.match(frontendDockerfile, /'libcrypto3=3\.5\.9-r0'/)
+  assert.match(frontendDockerfile, /'libssl3=3\.5\.9-r0'/)
+  assert.match(frontendDockerfile, /'pcre2=10\.49-r0'/)
+  assert.match(frontendDockerfile, /USER 101\s*$/)
+})
+
+test('ONP-1 base license policy purls bind the exact declared package versions and base distribution', () => {
+  for (const [imageKind, image] of Object.entries(baseLicensePolicy.images)) {
+    for (const override of image.overrides) {
+      const version = override.purl.match(/@([^?]+)(?:\?|$)/u)?.[1]
+      assert.ok(version, `${override.name} purl must include a version`)
+      assert.equal(decodeURIComponent(version), override.version, `${override.name} purl version`)
+      if (imageKind === 'backend' && override.purl.startsWith('pkg:deb/')) {
+        assert.match(override.purl, /[?&]distro=debian-13\.7(?:&|$)/u, `${override.name} Debian distribution`)
+      }
+    }
+  }
+})
+
+test('ONP-1 backend base-files override matches the Debian 13.7 SBOM and license evidence', () => {
+  const baseFiles = baseLicensePolicy.images.backend.overrides.find((override) => override.name === 'base-files')
+  assert.equal(baseFiles?.declaredLicense, 'GPL-2.0-only AND GPL-2.0-or-later AND LicenseRef-verbatim')
+  assert.equal(baseFiles?.evidenceSha256, 'c84c664bce3a83eaa327bb9e354c0df588bc535b5e95474aab7ca3cce74937cd')
 })
 
 test('ONP-1 workflow proves read-only API and worker startup from one image', () => {
@@ -77,6 +105,8 @@ test('ONP-1 proof is reusable by the fail-closed required gate and binds manifes
   assert.match(workflow, /FROM \$BUILD_IMAGE AS build/)
   assert.match(workflow, /FROM \$BACKEND_RUNTIME_IMAGE AS runtime/)
   assert.match(workflow, /FROM \$FRONTEND_RUNTIME_IMAGE AS runtime/)
+  assert.match(workflow, /frontend and backend images must have zero HIGH vulnerabilities/)
+  assert.match(workflow, /Keycloak HIGH vulnerability is outside the exact vendor-unfixed exception/)
 })
 
 test('ONP-2 runtime proof executes the exact image identities scanned and bound to the manifest', () => {
@@ -328,6 +358,8 @@ test('component proof has selected-image build, runtime, SBOM, scan, layer, and 
   assert.match(component, /SYFT_IMAGE/)
   assert.match(component, /TRIVY_IMAGE/)
   assert.match(component, /--scanners vuln,secret/)
+  assert.match(component, /COMPONENT_TRIVY_REPORT="proof\/\$\{image\}-component-trivy\.json" node -e/)
+  assert.doesNotMatch(component, /node - "\/out\/\$\{image\}-component-trivy\.json" <<'NODE'/)
   assert.match(component, /onprem-image-content-guard\.mjs --rootfs/)
   assert.match(component, /onprem-third-party-notices\.mjs/)
   assert.match(component, /onprem-image-license-reconciliation\.mjs/)

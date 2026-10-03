@@ -1,4 +1,4 @@
-FROM node:24-trixie-slim@sha256:0711b541c1c33a8a530ac4f0d391baa9a15b3d804695b1b24a47daa5fb60e74d AS build
+FROM node:24-trixie-slim@sha256:8ec5d7557396cfe32d21c3f9c13072355ceab22b584578ca4bb28af31120cffe AS build
 
 WORKDIR /workspace
 COPY admin-web/package*.json ./admin-web/
@@ -12,7 +12,13 @@ RUN cd admin-web \
   && VITE_API_BASE_URL="$VITE_API_BASE_URL" VITE_AUTH_MODE=bearer VITE_AUTH_PROVIDER=oidc VITE_OIDC_AUTO_REDIRECT=true VITE_OIDC_PAR_ENABLED=true VITE_BROWSER_SESSION_TRANSPORT=cookie VITE_SENTRY_ENABLED=false VITE_SENTRY_DSN= npm run build \
   && find dist -type f -name '*.map' -delete
 
-FROM nginxinc/nginx-unprivileged:1.30.4-alpine-slim@sha256:e88d990b349df8cf4aa82f16642d7a23375016638c9ace4e5c6ca25028e62e65 AS runtime
+FROM nginxinc/nginx-unprivileged:1.30.4-alpine-slim@sha256:7bbe8940bc478e5618e6d4cfbeda406e5b4217cacc06faacd665aca5e468595e AS runtime
+
+USER root
+RUN apk add --no-cache --upgrade \
+      'libcrypto3=3.5.9-r0' \
+      'libssl3=3.5.9-r0' \
+      'pcre2=10.49-r0'
 
 ARG SOURCE_REVISION=synthetic-unknown
 ARG BUILD_VERSION=onprem-unknown

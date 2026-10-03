@@ -3,6 +3,7 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { parseAuthContractFailure } from './onprem-keycloak-auth-proof.mjs'
+import { parseSafeAuthProofFailure } from './onprem-keycloak-auth-diagnostic.mjs'
 
 import { collectFirewallEvidence, validateFirewallRules } from './onprem-core-firewall-verify.mjs'
 import { isConfidentialRuntimeSecretName } from './onprem-core-runtime-proof.mjs'
@@ -222,13 +223,13 @@ function extractAllowlistedBootstrapCategories(value) {
     const trimmed = line.trim()
     if (!trimmed) continue
     const withoutComposePrefix = trimmed.replace(KEYCLOAK_BOOTSTRAP_LOG_PREFIX, '')
-    const authPhase = parseAuthContractFailure(withoutComposePrefix)
+    const authPhase = parseAuthContractFailure(withoutComposePrefix) ?? parseSafeAuthProofFailure(withoutComposePrefix)
     if (authPhase) {
       categories.add('auth-contract')
       phases.push(authPhase)
       continue
     }
-    if (withoutComposePrefix.startsWith('on-prem Keycloak auth proof: auth contract failed')) {
+    if (withoutComposePrefix.startsWith('on-prem Keycloak auth proof:')) {
       malformed = true
       continue
     }
@@ -732,7 +733,7 @@ export function runKeycloakRuntimeProof(options) {
         '-v', `${process.cwd()}/scripts/onprem-keycloak-auth-proof.mjs:/opt/onprem-keycloak-auth-proof.mjs:ro`,
         '-v', `${process.cwd()}/scripts/keycloak-browser-branding.mjs:/opt/keycloak-browser-branding.mjs:ro`,
         '-v', `${process.cwd()}/admin-web/src/assets/hr-axis-06-mark-transparent.png:/admin-web/src/assets/hr-axis-06-mark-transparent.png:ro`,
-        'node:24-trixie-slim@sha256:0711b541c1c33a8a530ac4f0d391baa9a15b3d804695b1b24a47daa5fb60e74d',
+        'node:24-trixie-slim@sha256:8ec5d7557396cfe32d21c3f9c13072355ceab22b584578ca4bb28af31120cffe',
         'node', '/opt/onprem-keycloak-auth-proof.mjs', '--host', options.authHost, '--connect-host', 'caddy', '--connect-port', '8443', '--accounts-file', '/run/onprem/synthetic-accounts', '--ca-file', '/run/onprem/ca.crt'], label, (value) => scanCapture(value, label))
       const parsed = JSON.parse(scanCapture(capture, label))
       assertKeycloakAuthProofReceipt(parsed)

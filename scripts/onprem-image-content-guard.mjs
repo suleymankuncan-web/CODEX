@@ -77,41 +77,41 @@ const KEYCLOAK_APPROVED_CONTENT = Object.freeze({
     sha256: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
     kind: 'empty-legacy-ca',
   }),
-  'opt/keycloak/lib/lib/deployment/io.quarkus.quarkus-credentials-deployment-3.33.3.1.jar': Object.freeze({
-    sha256: 'f5e6e6adb5be8bc5952c2ba8f0f99cdea56039991aa834fd2c85dd8b2e405642',
+  'opt/keycloak/lib/lib/deployment/io.quarkus.quarkus-credentials-deployment-3.40.1.jar': Object.freeze({
+    sha256: '17faa39f24f3fd229983f8cb0b6b8cc3f6bff4552414a9482b0ccff12a195e38',
     kind: 'jar',
   }),
-  'opt/keycloak/lib/lib/main/io.quarkus.quarkus-credentials-3.33.3.1.jar': Object.freeze({
-    sha256: '00fd02afdf24b94a4d94296f28261c77f9de89f2007011401bb48fda07728646',
+  'opt/keycloak/lib/lib/main/io.quarkus.quarkus-credentials-3.40.1.jar': Object.freeze({
+    sha256: '7ea00fcfeaf26c5bd6c925c1ab5247b06ff4afc8528812cdca741fc34bba641d',
     kind: 'jar',
   }),
-  'opt/keycloak/lib/lib/main/io.smallrye.certs.smallrye-private-key-pem-parser-0.9.3.jar': Object.freeze({
-    sha256: 'c00012f3e911e6dbc06059bc7d524a0437150739c32becbb259b78ecf1e75807',
+  'opt/keycloak/lib/lib/main/io.smallrye.certs.smallrye-private-key-pem-parser-0.9.4.jar': Object.freeze({
+    sha256: '2444ab1430505d1a8a9f6c9797fba60e14948bfe27cf8c98ae012c37bf768c15',
     kind: 'jar',
   }),
-  'opt/keycloak/lib/lib/main/org.keycloak.keycloak-model-storage-private-26.7.3.jar': Object.freeze({
-    sha256: 'bc50fbd743d2c5dc5f7c68c0fccbdece69e3d26639e81ff6c180fe3734f22859',
+  'opt/keycloak/lib/lib/main/org.keycloak.keycloak-model-storage-private-26.8.0.jar': Object.freeze({
+    sha256: 'e7a4e05be3b379e6ef1449f9a7721610d81bc7f3f55e367de90471556a77e9a8',
     kind: 'jar',
   }),
-  'opt/keycloak/lib/lib/main/org.keycloak.keycloak-server-spi-private-26.7.3.jar': Object.freeze({
-    sha256: 'b2ea7aab2eaba5f046c81b61cbbaf2c35f24180c6b85d126aa57a1cb7d05741e',
+  'opt/keycloak/lib/lib/main/org.keycloak.keycloak-server-spi-private-26.8.0.jar': Object.freeze({
+    sha256: 'ed371f06908fa84db350e6994268d601092fd33fe97d567cb701a863e88c7a6d',
     kind: 'jar',
   }),
-  'opt/keycloak/lib/lib/main/org.wildfly.security.wildfly-elytron-credential-2.8.4.Final.jar': Object.freeze({
-    sha256: 'b13e94dd2319886ea2126692c44c4823531e9f36635467062b19c738be55de6b',
+  'opt/keycloak/lib/lib/main/org.wildfly.security.wildfly-elytron-credential-2.9.2.SP1.jar': Object.freeze({
+    sha256: '58f9844704f7e41a6624cebfcfdf75866d39342ca1d4b03507eb257fd2e904b9',
     kind: 'jar',
   }),
-  'opt/keycloak/lib/lib/main/org.wildfly.security.wildfly-elytron-password-impl-2.8.4.Final.jar': Object.freeze({
-    sha256: '95d9843470d3d46d179e94e6fd5ab921abd6f760ca2d08cb0572c5408297da43',
+  'opt/keycloak/lib/lib/main/org.wildfly.security.wildfly-elytron-password-impl-2.9.2.SP1.jar': Object.freeze({
+    sha256: 'f23d8919d242abd92ed2aeed60629a67133e56f1d39a616e362c486d1c80a420',
     kind: 'jar',
   }),
-  'opt/keycloak/lib/lib/deployment/io.quarkus.quarkus-arc-test-supplement-3.33.3.1.jar': Object.freeze({
-    sha256: '16369d03f3de217ead4d5a5713f31b48b5138970e6f7e49aa5e7f99dfdae9227',
+  'opt/keycloak/lib/lib/deployment/io.quarkus.quarkus-arc-test-supplement-3.40.1.jar': Object.freeze({
+    sha256: '9aa10db88343da8402b19fc3cdc7306e160e262e821c15f118c66eb38241b030',
     kind: 'jar',
     allowTestPath: true,
   }),
-  'opt/keycloak/lib/lib/deployment/io.quarkus.quarkus-arc-test-supplement-decorator-3.33.3.1.jar': Object.freeze({
-    sha256: '9d05f4051396c822a4f9210c7b3847c28af8a7c45637b20b12b5ba9fc6136552',
+  'opt/keycloak/lib/lib/deployment/io.quarkus.quarkus-arc-test-supplement-decorator-3.40.1.jar': Object.freeze({
+    sha256: '244b416301a097efe9f4489eb8a31e35bd2b7b63a8500f01e124d14c6581eb31',
     kind: 'jar',
     allowTestPath: true,
   }),
