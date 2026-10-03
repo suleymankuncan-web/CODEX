@@ -184,7 +184,9 @@ export function reconcileImageLicenses({ sbom, npmInventory, policy, imageKind, 
     const overrideKey = `${name}\u0000${version}\u0000${purl}`
     const override = overrides.get(overrideKey)
     if (override) {
-      if (override.declaredLicense !== declaredLicense) throw new Error(`declared license mismatch for ${identity}`)
+      if (override.declaredLicense !== declaredLicense) {
+        throw new Error(`declared license mismatch for ${identity}: observed ${declaredLicense}; expected ${override.declaredLicense}`)
+      }
       assertStandardExpression(override.resolvedLicense, allowedIds, identity, { allowLicenseRef: true })
       usedOverrides.add(overrideKey)
       return { name, version, purl, classification: 'base-runtime-override', license: override.resolvedLicense, evidence: overrideEvidence(evidenceRoot, override, identity) }

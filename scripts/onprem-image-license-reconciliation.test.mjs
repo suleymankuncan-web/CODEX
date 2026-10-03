@@ -157,6 +157,12 @@ test('base digest, package identity, and purl drift fail closed', () => {
       () => reconcile(item),
       (error) => error.message.includes(observedPurl) && error.message.includes('pkg:deb/synthetic/runtime-lib@2.0.0'),
     )
+    item.sbom.packages[3].externalRefs = purlRef('pkg:deb/synthetic/runtime-lib@2.0.0')
+    item.sbom.packages[3].licenseDeclared = 'Apache-2.0'
+    assert.throws(
+      () => reconcile(item),
+      (error) => error.message.includes('observed Apache-2.0') && error.message.includes('expected NOASSERTION'),
+    )
   } finally {
     rmSync(item.root, { recursive: true, force: true })
   }
