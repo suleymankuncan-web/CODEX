@@ -293,7 +293,10 @@ test('Keycloak license reconciliation binds the sole blank-source package to the
     mismatchedRoot.packages[0].checksums[0].checksumValue = imageDigest
     writeFileSync(sbomPath, JSON.stringify(mismatchedRoot))
     assert.throws(() => reconcileKeycloakLicenses(options, { ...policy, maxUnresolvedCount: 0 }), /exceeds approved maximum/)
-    assert.throws(() => reconcileKeycloakLicenses(options, { ...policy, expectedPackageCount: 2 }), /pinned SBOM package count mismatch/)
+    assert.throws(
+      () => reconcileKeycloakLicenses(options, { ...policy, expectedPackageCount: 2 }),
+      (error) => error.message.includes('observed 1') && error.message.includes('expected 2'),
+    )
   } finally {
     rmSync(root, { recursive: true, force: true })
   }

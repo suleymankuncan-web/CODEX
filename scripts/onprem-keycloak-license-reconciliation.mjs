@@ -202,7 +202,9 @@ export function reconcileKeycloakLicenses(options, angusPolicy = ANGUS_EMBEDDED_
   if (!Array.isArray(sbom.packages) || sbom.packages.length === 0) throw new Error('Keycloak SBOM packages are required')
   if (inventory.dataClass !== 'synthetic' || typeof inventory.image !== 'string' || typeof inventory.baseImage !== 'string' || !/^sha256:[a-f0-9]{64}$/i.test(String(inventory.imageId ?? ''))) throw new Error('Keycloak license inventory identity is incomplete')
   if (inventory.packageCount !== sbom.packages.length) throw new Error('Keycloak license inventory package count does not match SBOM')
-  if (!Number.isInteger(angusPolicy.expectedPackageCount) || sbom.packages.length !== angusPolicy.expectedPackageCount) throw new Error('Keycloak pinned SBOM package count mismatch')
+  if (!Number.isInteger(angusPolicy.expectedPackageCount) || sbom.packages.length !== angusPolicy.expectedPackageCount) {
+    throw new Error(`Keycloak pinned SBOM package count mismatch: observed ${sbom.packages.length}; expected ${angusPolicy.expectedPackageCount}`)
+  }
   const licenseText = readFileSync(options.licenseText, 'utf8').trim()
   const licensePaths = readFileSync(options.licensePaths, 'utf8').split(/\r?\n/).map((line) => line.trim()).filter(Boolean)
   if (!statSync(options.licenseBundle).isFile() || statSync(options.licenseBundle).size === 0) throw new Error('Keycloak bundled license evidence is empty')
