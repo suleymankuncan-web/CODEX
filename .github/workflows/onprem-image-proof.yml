@@ -1253,13 +1253,12 @@ jobs:
             docker run --rm -v /var/run/docker.sock:/var/run/docker.sock --volume "$TRIVY_CACHE_DIR:/trivy-cache" "$TRIVY_IMAGE" image \
               --cache-dir /trivy-cache \
               --scanners secret --exit-code 1 "$tag"
-            node - "/out/${image}-component-trivy.json" <<'NODE'
-            const { readFileSync } = require('node:fs')
-            const reportPath = `proof/${process.argv[2].split('/').pop()}`
-            const report = JSON.parse(readFileSync(reportPath, 'utf8'))
-            const high = report.Results?.flatMap((result) => result.Vulnerabilities ?? []).filter((finding) => finding.Severity === 'HIGH') ?? []
-            if (high.length !== 0) throw new Error('selected frontend/backend component image must have zero HIGH vulnerabilities')
-            NODE
+            COMPONENT_TRIVY_REPORT="proof/${image}-component-trivy.json" node -e '
+              const { readFileSync } = require("node:fs")
+              const report = JSON.parse(readFileSync(process.env.COMPONENT_TRIVY_REPORT, "utf8"))
+              const high = report.Results?.flatMap((result) => result.Vulnerabilities ?? []).filter((finding) => finding.Severity === "HIGH") ?? []
+              if (high.length !== 0) throw new Error("selected frontend/backend component image must have zero HIGH vulnerabilities")
+            '
           done
 
       - name: Export selected image filesystems and every layer through content guards

@@ -349,6 +349,8 @@ test('component proof has selected-image build, runtime, SBOM, scan, layer, and 
   assert.match(component, /SYFT_IMAGE/)
   assert.match(component, /TRIVY_IMAGE/)
   assert.match(component, /--scanners vuln,secret/)
+  assert.match(component, /COMPONENT_TRIVY_REPORT="proof\/\$\{image\}-component-trivy\.json" node -e/)
+  assert.doesNotMatch(component, /node - "\/out\/\$\{image\}-component-trivy\.json" <<'NODE'/)
   assert.match(component, /onprem-image-content-guard\.mjs --rootfs/)
   assert.match(component, /onprem-third-party-notices\.mjs/)
   assert.match(component, /onprem-image-license-reconciliation\.mjs/)
