@@ -3,6 +3,7 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { parseAuthContractFailure } from './onprem-keycloak-auth-proof.mjs'
+import { parseSafeAuthProofFailure } from './onprem-keycloak-auth-diagnostic.mjs'
 
 import { collectFirewallEvidence, validateFirewallRules } from './onprem-core-firewall-verify.mjs'
 import { isConfidentialRuntimeSecretName } from './onprem-core-runtime-proof.mjs'
@@ -222,13 +223,13 @@ function extractAllowlistedBootstrapCategories(value) {
     const trimmed = line.trim()
     if (!trimmed) continue
     const withoutComposePrefix = trimmed.replace(KEYCLOAK_BOOTSTRAP_LOG_PREFIX, '')
-    const authPhase = parseAuthContractFailure(withoutComposePrefix)
+    const authPhase = parseAuthContractFailure(withoutComposePrefix) ?? parseSafeAuthProofFailure(withoutComposePrefix)
     if (authPhase) {
       categories.add('auth-contract')
       phases.push(authPhase)
       continue
     }
-    if (withoutComposePrefix.startsWith('on-prem Keycloak auth proof: auth contract failed')) {
+    if (withoutComposePrefix.startsWith('on-prem Keycloak auth proof:')) {
       malformed = true
       continue
     }
