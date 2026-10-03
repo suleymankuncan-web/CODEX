@@ -11,8 +11,9 @@ const purl = (referenceLocator) => [{ referenceType: 'purl', referenceLocator }]
 const digest = (value) => createHash('sha256').update(value).digest('hex')
 const TEST_IMAGE_ID = `sha256:${'a'.repeat(64)}`
 
-test('Keycloak 26.8.0 policy pins the observed 565-package SBOM', () => {
+test('Keycloak 26.8.0 policy pins the observed package and unresolved boundaries', () => {
   assert.equal(ANGUS_EMBEDDED_LICENSE_POLICY.expectedPackageCount, 565)
+  assert.equal(ANGUS_EMBEDDED_LICENSE_POLICY.maxUnresolvedCount, 455)
 })
 
 const inventoryFor = (packageCount) => ({ image: 'hr-axis-onprem-keycloak:proof', imageId: TEST_IMAGE_ID, baseImage: 'quay.io/keycloak/keycloak:26.8.0@sha256:base', packageCount, dataClass: 'synthetic' })

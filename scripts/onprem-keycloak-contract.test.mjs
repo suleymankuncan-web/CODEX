@@ -829,6 +829,23 @@ test('ONP-3B image proof binds the exact embedded Angus JAR license evidence', (
   assert.match(workflow, /component\.license !== null \|\| component\.evidence !== null/)
 })
 
+test('failed Keycloak license checks preserve only diagnostic evidence without weakening the approved gate', () => {
+  const { workflow } = input()
+  const diagnosticStep = workflow.split('      - name: Upload failed Keycloak license diagnostics\n')[1]?.split('      - name: ')[0]
+  assert.ok(diagnosticStep, 'failure diagnostics step must exist')
+  assert.match(diagnosticStep, /if: failure\(\) && inputs\.proof_mode == 'full' && github\.event_name != 'pull_request'/)
+  assert.match(diagnosticStep, /name: onprem-keycloak-license-diagnostics-\$\{\{ inputs\.expected_sha \}\}/)
+  const paths = diagnosticStep.split('          path: |\n')[1]?.trim().split('\n').map((line) => line.trim())
+  assert.deepEqual(paths, [
+    'proof/keycloak-sbom.spdx.json',
+    'proof/keycloak-license-inventory.json',
+    'proof/keycloak-LICENSE.txt',
+    'proof/keycloak-license-paths.txt',
+    'proof/keycloak-license-evidence.tar',
+  ])
+  assert.match(workflow, /receipt\.maxUnresolvedCount !== 455/)
+})
+
 test('ONP-3B contract rejects Keycloak tag drift gaps around SBOM and reconciliation', () => {
   const beforeSbom = input()
   beforeSbom.workflow = beforeSbom.workflow.replace(

@@ -656,6 +656,20 @@ jobs:
           console.log('Keycloak license reconciliation: residualExternalReviewRequired=true (external review remains an activation gate)')
           NODE
 
+      - name: Upload failed Keycloak license diagnostics
+        if: failure() && inputs.proof_mode == 'full' && github.event_name != 'pull_request'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: onprem-keycloak-license-diagnostics-${{ inputs.expected_sha }}
+          if-no-files-found: warn
+          retention-days: 3
+          path: |
+            proof/keycloak-sbom.spdx.json
+            proof/keycloak-license-inventory.json
+            proof/keycloak-LICENSE.txt
+            proof/keycloak-license-paths.txt
+            proof/keycloak-license-evidence.tar
+
       - name: Generate sanitized Keycloak image manifest
         if: inputs.proof_mode == 'full'
         run: |
