@@ -57,9 +57,10 @@ test('ONP-1 base license policy purls bind the exact declared package versions a
   }
 })
 
-test('ONP-1 backend base-files override matches the Debian 13.7 SBOM license declaration', () => {
+test('ONP-1 backend base-files override matches the Debian 13.7 SBOM and license evidence', () => {
   const baseFiles = baseLicensePolicy.images.backend.overrides.find((override) => override.name === 'base-files')
   assert.equal(baseFiles?.declaredLicense, 'GPL-2.0-only AND GPL-2.0-or-later AND LicenseRef-verbatim')
+  assert.equal(baseFiles?.evidenceSha256, 'c84c664bce3a83eaa327bb9e354c0df588bc535b5e95474aab7ca3cce74937cd')
 })
 
 test('ONP-1 workflow proves read-only API and worker startup from one image', () => {
