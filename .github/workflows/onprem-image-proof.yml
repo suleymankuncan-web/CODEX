@@ -490,6 +490,9 @@ jobs:
           mkdir -p proof/keycloak-rootfs
           docker export "$keycloak_id" | tar -xf - -C proof/keycloak-rootfs
           docker rm "$keycloak_id" >/dev/null
+          find proof/keycloak-rootfs/opt/keycloak/lib/lib -type f \
+            \( -name '*quarkus-arc-test-supplement*' -o -name '*quarkus-credentials*' -o -name '*smallrye-private-key*' -o -name '*keycloak-*-private*' -o -name '*wildfly-elytron-credential*' -o -name '*wildfly-elytron-password*' \) \
+            -print0 | sort -z | xargs -0 sha256sum
           node scripts/onprem-image-content-guard.mjs --rootfs proof/keycloak-rootfs --kind keycloak --application-root /opt/keycloak --json \
             | tee proof/keycloak-content-guard.json
           docker save "$keycloak_tag" -o proof/keycloak-image.tar
