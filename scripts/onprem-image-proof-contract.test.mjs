@@ -44,12 +44,15 @@ test('ONP-1 frontend runtime pins the patched Alpine crypto and regex packages b
   assert.match(frontendDockerfile, /USER 101\s*$/)
 })
 
-test('ONP-1 base license policy purls bind the exact declared package versions', () => {
-  for (const image of Object.values(baseLicensePolicy.images)) {
+test('ONP-1 base license policy purls bind the exact declared package versions and base distribution', () => {
+  for (const [imageKind, image] of Object.entries(baseLicensePolicy.images)) {
     for (const override of image.overrides) {
       const version = override.purl.match(/@([^?]+)(?:\?|$)/u)?.[1]
       assert.ok(version, `${override.name} purl must include a version`)
       assert.equal(decodeURIComponent(version), override.version, `${override.name} purl version`)
+      if (imageKind === 'backend' && override.purl.startsWith('pkg:deb/')) {
+        assert.match(override.purl, /[?&]distro=debian-13\.7(?:&|$)/u, `${override.name} Debian distribution`)
+      }
     }
   }
 })
