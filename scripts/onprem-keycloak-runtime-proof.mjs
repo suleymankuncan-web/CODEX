@@ -732,7 +732,7 @@ export function runKeycloakRuntimeProof(options) {
         '-v', `${process.cwd()}/scripts/onprem-keycloak-auth-proof.mjs:/opt/onprem-keycloak-auth-proof.mjs:ro`,
         '-v', `${process.cwd()}/scripts/keycloak-browser-branding.mjs:/opt/keycloak-browser-branding.mjs:ro`,
         '-v', `${process.cwd()}/admin-web/src/assets/hr-axis-06-mark-transparent.png:/admin-web/src/assets/hr-axis-06-mark-transparent.png:ro`,
-        'node:24-trixie-slim@sha256:0711b541c1c33a8a530ac4f0d391baa9a15b3d804695b1b24a47daa5fb60e74d',
+        'node:24-trixie-slim@sha256:8ec5d7557396cfe32d21c3f9c13072355ceab22b584578ca4bb28af31120cffe',
         'node', '/opt/onprem-keycloak-auth-proof.mjs', '--host', options.authHost, '--connect-host', 'caddy', '--connect-port', '8443', '--accounts-file', '/run/onprem/synthetic-accounts', '--ca-file', '/run/onprem/ca.crt'], label, (value) => scanCapture(value, label))
       const parsed = JSON.parse(scanCapture(capture, label))
       assertKeycloakAuthProofReceipt(parsed)

@@ -14,9 +14,7 @@ import {
   selectCsvFirstFieldsByExactSecond,
   validateOnpremKeycloakContract,
 } from './onprem-keycloak-contract.mjs'
-import { NETTY_PATCHES } from './onprem-keycloak-netty-patch.mjs'
-import { BOUNCY_CASTLE_PATCHES } from './onprem-keycloak-bouncycastle-patch.mjs'
-import { FREEMARKER_PATCH } from './onprem-keycloak-freemarker-patch.mjs'
+
 
 const read = (path) => readFileSync(path, 'utf8')
 
@@ -80,82 +78,16 @@ test('company overlay persists the approved seven-day Remember Me policy without
   assert.doesNotMatch(bootstrap, /BROWSER_SESSION_TTL|accessTokenLifespan|ssoSessionIdleTimeout:/)
 })
 
-test('ONP-3B Keycloak image replaces the complete Netty 4.1.136 family with checksum-pinned 4.1.137 artifacts', () => {
-  const dockerfile = input().keycloakDockerfile
-  const expectedIds = [
-    'buffer',
-    'codec',
-    'codec-dns',
-    'codec-haproxy',
-    'codec-http',
-    'codec-http2',
-    'codec-socks',
-    'common',
-    'handler',
-    'handler-proxy',
-    'resolver',
-    'resolver-dns',
-    'transport',
-    'transport-classes-epoll',
-    'transport-native-epoll-linux-aarch_64',
-    'transport-native-epoll-linux-x86_64',
-    'transport-native-unix-common',
-  ]
-  const patchLines = dockerfile.split(/\r?\n/).filter((line) =>
-    line.startsWith('COPY --from=netty-downloader') && line.includes('/patch/jars/netty-'),
-  )
-
-  assert.deepEqual(NETTY_PATCHES.map((artifact) => artifact.id), expectedIds)
-  assert.equal(patchLines.length, expectedIds.length)
-  for (const [index, artifact] of NETTY_PATCHES.entries()) {
-    const classifierSuffix = artifact.classifier ? `-${artifact.classifier}` : ''
-    assert.match(artifact.sha256, /^[a-f0-9]{64}$/)
-    assert.equal(artifact.url, `https://repo.maven.apache.org/maven2/io/netty/netty-${artifact.module}/4.1.137.Final/netty-${artifact.module}-4.1.137.Final${classifierSuffix}.jar`)
-    assert.match(
-      patchLines[index],
-      new RegExp(`^COPY --from=netty-downloader --chown=0:0 --chmod=0644 /patch/jars/netty-${artifact.id}\\.jar /opt/keycloak/lib/lib/main/io\\.netty\\.netty-${artifact.module}-4\\.1\\.136\\.Final${classifierSuffix}\\.jar$`),
-    )
-  }
-  assert.match(dockerfile, /ARG NODE_BUILD_IMAGE=node:24-trixie-slim@sha256:[a-f0-9]{64}/)
-  assert.match(dockerfile, /RUN node \/patch\/download\.mjs/)
-})
-
-test('ONP-3B Keycloak image replaces the vulnerable Bouncy Castle 1.84 family with checksum-pinned 1.85 artifacts', () => {
-  const dockerfile = input().keycloakDockerfile
-  const expectedArtifacts = ['bcprov-jdk18on', 'bcpkix-jdk18on', 'bcutil-jdk18on']
-  const expectedCopies = [
-    'COPY --from=netty-downloader --chown=0:0 --chmod=0644 /patch/bouncycastle/bcprov-jdk18on.jar /opt/keycloak/lib/lib/main/org.bouncycastle.bcprov-jdk18on-1.84.jar',
-    'COPY --from=netty-downloader --chown=0:0 --chmod=0644 /patch/bouncycastle/bcprov-jdk18on.jar /opt/keycloak/bin/client/lib/bcprov-jdk18on-1.84.jar',
-    'COPY --from=netty-downloader --chown=0:0 --chmod=0644 /patch/bouncycastle/bcpkix-jdk18on.jar /opt/keycloak/lib/lib/main/org.bouncycastle.bcpkix-jdk18on-1.84.jar',
-    'COPY --from=netty-downloader --chown=0:0 --chmod=0644 /patch/bouncycastle/bcutil-jdk18on.jar /opt/keycloak/lib/lib/main/org.bouncycastle.bcutil-jdk18on-1.84.jar',
-  ]
-
-  assert.deepEqual(BOUNCY_CASTLE_PATCHES.map((artifact) => artifact.artifact), expectedArtifacts)
-  for (const artifact of BOUNCY_CASTLE_PATCHES) {
-    assert.match(artifact.sha256, /^[a-f0-9]{64}$/)
-    assert.equal(artifact.url, `https://repo.maven.apache.org/maven2/org/bouncycastle/${artifact.artifact}/1.85/${artifact.artifact}-1.85.jar`)
-  }
-  assert.match(dockerfile, /COPY scripts\/onprem-keycloak-bouncycastle-patch\.mjs \/patch\/download-bouncycastle\.mjs/)
-  assert.match(dockerfile, /node \/patch\/download-bouncycastle\.mjs/)
-  for (const copy of expectedCopies) assert.ok(dockerfile.includes(copy), copy)
-})
-
-test('ONP-3B Keycloak image replaces vulnerable FreeMarker without losing its Quarkus path', () => {
+test('ONP-3B Keycloak 26.8.0 uses the fixed upstream dependency set without stale patch stages', () => {
   const baseline = input()
-  assert.deepEqual(FREEMARKER_PATCH, {
-    version: '2.3.35',
-    sha256: '0fac87dddd78f1223139e8ef88e819c7f483c0a3835cdf5982ad5e4576d1d896',
-    url: 'https://repo.maven.apache.org/maven2/org/freemarker/freemarker/2.3.35/freemarker-2.3.35.jar',
-  })
-  assert.match(baseline.keycloakDockerfile, /node \/patch\/download-freemarker\.mjs/)
-  const copy = 'COPY --from=netty-downloader --chown=0:0 --chmod=0644 /patch/freemarker/freemarker.jar /opt/keycloak/lib/lib/main/org.freemarker.freemarker-2.3.32.jar'
-  assert.ok(baseline.keycloakDockerfile.includes(copy))
-  const missingPatch = validateOnpremKeycloakContract({
+  assert.match(baseline.keycloakDockerfile, /ARG KEYCLOAK_BASE_IMAGE=quay\.io\/keycloak\/keycloak:26\.8\.0@sha256:b0f60d489d51c5d113390bdf5461d4c06e6051be026c05549f2e1e10ec352bcc/)
+  assert.doesNotMatch(baseline.keycloakDockerfile, /netty-downloader|onprem-keycloak-(?:netty|bouncycastle|freemarker)-patch|repo\.maven\.apache\.org/)
+  const stalePatch = validateOnpremKeycloakContract({
     ...baseline,
-    keycloakDockerfile: baseline.keycloakDockerfile.replace(copy, ''),
+    keycloakDockerfile: `${baseline.keycloakDockerfile}\nCOPY scripts/onprem-keycloak-netty-patch.mjs /patch/download.mjs\n`,
   })
-  assert.equal(missingPatch.ok, false)
-  assert.match(missingPatch.errors.join('; '), /FreeMarker/)
+  assert.equal(stalePatch.ok, false)
+  assert.match(stalePatch.errors.join('; '), /fixed upstream dependency set/)
 })
 
 test('identity lifecycle service account can read realm roles before mapping them', () => {

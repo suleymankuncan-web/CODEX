@@ -75,15 +75,15 @@ additional one-shot capacity and are not part of the 4.0-vCPU steady budget.
 ## Keycloak contract
 
 - The pinned upstream base is
-  `quay.io/keycloak/keycloak:26.7.3@sha256:ff4257d0d64efbe99ed1ddfaf07765cc3c36dc7518bf8324d41961327f441c54`.
+  `quay.io/keycloak/keycloak:26.8.0@sha256:b0f60d489d51c5d113390bdf5461d4c06e6051be026c05549f2e1e10ec352bcc`.
   `infra/onprem/images/keycloak.Dockerfile` builds the final image with
   `kc.sh build --db=postgres --health-enabled=true --metrics-enabled=true`;
   the approved env file must contain the owner-signed digest of that final
   image, not a mutable proof tag or raw upstream image.
-- Before augmentation, the image replaces the base's FreeMarker 2.3.32 JAR
-  with checksum-pinned 2.3.35 at the same Quarkus path (CVE-2026-84939).
-  The build and critical-vulnerability scan must both pass; the base image
-  digest and Keycloak server version stay unchanged.
+- The 26.8.0 security release supplies the approved Netty, Bouncy Castle,
+  FreeMarker, Jackson, and JDBC dependency set directly. Local replacement JAR
+  stages are forbidden so the optimized Quarkus model cannot retain stale or
+  duplicate dependencies.
 - Startup is `start --optimized`; `start-dev`, default admin credentials, and
   realm imports containing demo users are forbidden.
 - PostgreSQL uses a dedicated `keycloak` database and role. Both credentials

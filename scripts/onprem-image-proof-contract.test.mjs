@@ -35,6 +35,14 @@ test('ONP-1 images use immutable bases, non-root users, and no source-bearing OC
   assert.doesNotMatch(backendDockerfile, /node_modules[^\n]*\*\.txt/)
 })
 
+test('ONP-1 frontend runtime pins the patched Alpine crypto and regex packages before returning to uid 101', () => {
+  assert.match(frontendDockerfile, /USER root\s+RUN apk add --no-cache --upgrade/)
+  assert.match(frontendDockerfile, /'libcrypto3=3\.5\.9-r0'/)
+  assert.match(frontendDockerfile, /'libssl3=3\.5\.9-r0'/)
+  assert.match(frontendDockerfile, /'pcre2=10\.49-r0'/)
+  assert.match(frontendDockerfile, /USER 101\s*$/)
+})
+
 test('ONP-1 workflow proves read-only API and worker startup from one image', () => {
   assert.match(workflow, /--read-only/)
   assert.match(workflow, /--cap-drop=ALL/)
@@ -77,6 +85,8 @@ test('ONP-1 proof is reusable by the fail-closed required gate and binds manifes
   assert.match(workflow, /FROM \$BUILD_IMAGE AS build/)
   assert.match(workflow, /FROM \$BACKEND_RUNTIME_IMAGE AS runtime/)
   assert.match(workflow, /FROM \$FRONTEND_RUNTIME_IMAGE AS runtime/)
+  assert.match(workflow, /frontend and backend images must have zero HIGH vulnerabilities/)
+  assert.match(workflow, /Keycloak HIGH vulnerability is outside the exact vendor-unfixed exception/)
 })
 
 test('ONP-2 runtime proof executes the exact image identities scanned and bound to the manifest', () => {

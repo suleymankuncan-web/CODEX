@@ -1,7 +1,7 @@
 import { sha256, stableJson } from './release-stage-proof.mjs'
 
 export const PINNED_NODE_IMAGE =
-  'node:24-trixie-slim@sha256:0711b541c1c33a8a530ac4f0d391baa9a15b3d804695b1b24a47daa5fb60e74d'
+  'node:24-trixie-slim@sha256:8ec5d7557396cfe32d21c3f9c13072355ceab22b584578ca4bb28af31120cffe'
 
 const DIGEST_RE = /^[a-f0-9]{64}$/u
 

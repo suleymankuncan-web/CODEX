@@ -63,11 +63,11 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  BUILD_IMAGE: node:24-trixie-slim@sha256:0711b541c1c33a8a530ac4f0d391baa9a15b3d804695b1b24a47daa5fb60e74d
-  BACKEND_RUNTIME_IMAGE: gcr.io/distroless/nodejs24-debian13:nonroot@sha256:fbbdda866ea71aef98c4abece17e3d61fbf820cc2ef3961522caa2478716171a
-  FRONTEND_RUNTIME_IMAGE: nginxinc/nginx-unprivileged:1.30.4-alpine-slim@sha256:e88d990b349df8cf4aa82f16642d7a23375016638c9ace4e5c6ca25028e62e65
+  BUILD_IMAGE: node:24-trixie-slim@sha256:8ec5d7557396cfe32d21c3f9c13072355ceab22b584578ca4bb28af31120cffe
+  BACKEND_RUNTIME_IMAGE: gcr.io/distroless/nodejs24-debian13:nonroot@sha256:9eeb7f5887d0e239e78264b06f7f11d2e14be534050481803a9e4728fcdd278e
+  FRONTEND_RUNTIME_IMAGE: nginxinc/nginx-unprivileged:1.30.4-alpine-slim@sha256:7bbe8940bc478e5618e6d4cfbeda406e5b4217cacc06faacd665aca5e468595e
   CADDY_IMAGE: caddy:2.11.4-alpine@sha256:5f5c8640aae01df9654968d946d8f1a56c497f1dd5c5cda4cf95ab7c14d58648
-  KEYCLOAK_BASE_IMAGE: quay.io/keycloak/keycloak:26.7.3@sha256:ff4257d0d64efbe99ed1ddfaf07765cc3c36dc7518bf8324d41961327f441c54
+  KEYCLOAK_BASE_IMAGE: quay.io/keycloak/keycloak:26.8.0@sha256:b0f60d489d51c5d113390bdf5461d4c06e6051be026c05549f2e1e10ec352bcc
   KEYCLOAK_IMAGE: hr-axis-onprem-keycloak:proof
   KEYCLOAK_TRIVY_IMAGE: aquasec/trivy:0.72.0@sha256:cffe3f5161a47a6823fbd23d985795b3ed72a4c806da4c4df16266c02accdd6f
   TRIVY_IMAGE: aquasec/trivy:0.72.0@sha256:cffe3f5161a47a6823fbd23d985795b3ed72a4c806da4c4df16266c02accdd6f
@@ -159,7 +159,7 @@ jobs:
         run: |
           set -euo pipefail
           docker pull "$KEYCLOAK_BASE_IMAGE"
-          docker image inspect "$KEYCLOAK_BASE_IMAGE" --format '{{json .RepoDigests}}' | grep -Fqx '["quay.io/keycloak/keycloak@sha256:ff4257d0d64efbe99ed1ddfaf07765cc3c36dc7518bf8324d41961327f441c54"]'
+          docker image inspect "$KEYCLOAK_BASE_IMAGE" --format '{{json .RepoDigests}}' | grep -Fqx '["quay.io/keycloak/keycloak@sha256:b0f60d489d51c5d113390bdf5461d4c06e6051be026c05549f2e1e10ec352bcc"]'
           docker build --file infra/onprem/images/keycloak.Dockerfile --tag "$KEYCLOAK_IMAGE" \
             --build-arg KEYCLOAK_BASE_IMAGE="$KEYCLOAK_BASE_IMAGE" .
           test "$(docker image inspect "$KEYCLOAK_IMAGE" --format '{{.Config.Entrypoint}}')" = '[/opt/keycloak/bin/kc.sh]'
@@ -438,6 +438,26 @@ jobs:
             --cache-dir /trivy-cache \
             --scanners secret --exit-code 1 "$KEYCLOAK_IMAGE"
 
+          node <<'NODE'
+          const { readFileSync } = require('node:fs')
+          const highFindings = (path) => JSON.parse(readFileSync(path, 'utf8')).Results
+            ?.flatMap((result) => result.Vulnerabilities ?? [])
+            .filter((finding) => finding.Severity === 'HIGH') ?? []
+          for (const image of ['frontend', 'backend']) {
+            const findings = highFindings(`proof/${image}-trivy.json`)
+            if (findings.length !== 0) throw new Error('frontend and backend images must have zero HIGH vulnerabilities')
+          }
+          const allowedIds = new Set(['CVE-2026-103111', 'CVE-2026-86145', 'CVE-2026-89161'])
+          const allowedPackages = new Set(['pcre2', 'pcre2-syntax'])
+          const keycloakHigh = highFindings('proof/keycloak-trivy.json')
+          if (keycloakHigh.length !== 6) throw new Error(`Keycloak vendor-unfixed HIGH count changed: ${keycloakHigh.length}`)
+          for (const finding of keycloakHigh) {
+            if (!allowedIds.has(finding.VulnerabilityID) || !allowedPackages.has(finding.PkgName) || finding.FixedVersion) {
+              throw new Error('Keycloak HIGH vulnerability is outside the exact vendor-unfixed exception')
+            }
+          }
+          NODE
+
       - name: Export final filesystems and layers then run content guards
         if: inputs.proof_mode == 'full'
         run: |
@@ -528,13 +548,13 @@ jobs:
           runtime_evidence_container="$(docker create "$BACKEND_RUNTIME_IMAGE")"
           frontend_evidence_container="$(docker create "$FRONTEND_RUNTIME_IMAGE")"
           trap 'docker rm "$build_evidence_container" "$runtime_evidence_container" "$frontend_evidence_container" >/dev/null 2>&1 || true' EXIT
-          docker cp "$build_evidence_container:/usr/share/doc/base-files/copyright" proof/base-license-evidence/debian/base-files-13.8+deb13u6.copyright
+          docker cp "$build_evidence_container:/usr/share/doc/base-files/copyright" proof/base-license-evidence/debian/base-files-13.8+deb13u7.copyright
           docker cp "$build_evidence_container:/usr/share/doc/gcc-14-base/copyright" proof/base-license-evidence/debian/gcc-14-base-14.2.0-19.copyright
-          docker cp "$build_evidence_container:/usr/share/doc/libc6/copyright" proof/base-license-evidence/debian/libc6-2.41-12+deb13u3.copyright
-          docker cp "$build_evidence_container:/usr/share/doc/libssl3t64/copyright" proof/base-license-evidence/debian/libssl3t64-3.5.6-1~deb13u2.copyright
+          docker cp "$build_evidence_container:/usr/share/doc/libc6/copyright" proof/base-license-evidence/debian/libc6-2.41-12+deb13u4.copyright
+          docker cp "$build_evidence_container:/usr/share/doc/libssl3t64/copyright" proof/base-license-evidence/debian/libssl3t64-3.5.7-1~deb13u3.copyright
           docker cp "$build_evidence_container:/usr/share/doc/libzstd1/copyright" proof/base-license-evidence/debian/libzstd1-1.5.7+dfsg-1.copyright
-          docker cp "$build_evidence_container:/usr/share/doc/tzdata/copyright" proof/base-license-evidence/debian/tzdata-2026b-0+deb13u1.copyright
-          docker cp "$build_evidence_container:/usr/local/LICENSE" proof/base-license-evidence/node/node-24.19.0.LICENSE
+          docker cp "$build_evidence_container:/usr/share/doc/tzdata/copyright" proof/base-license-evidence/debian/tzdata-2026c-0+deb13u1.copyright
+          docker cp "$build_evidence_container:/usr/local/LICENSE" proof/base-license-evidence/node/node-24.21.0.LICENSE
           docker cp "$runtime_evidence_container:/usr/share/doc/media-types/copyright" proof/base-license-evidence/debian/media-types-13.0.0.copyright
           docker cp "$frontend_evidence_container:/usr/share/licenses/nginx/COPYRIGHT" proof/base-license-evidence/alpine/nginx-1.30.4-r1.COPYRIGHT
           frontend_apk_metadata="$RUNNER_TEMP/hr-axis-onprem-frontend-apk-installed"
@@ -1233,6 +1253,13 @@ jobs:
             docker run --rm -v /var/run/docker.sock:/var/run/docker.sock --volume "$TRIVY_CACHE_DIR:/trivy-cache" "$TRIVY_IMAGE" image \
               --cache-dir /trivy-cache \
               --scanners secret --exit-code 1 "$tag"
+            node - "/out/${image}-component-trivy.json" <<'NODE'
+            const { readFileSync } = require('node:fs')
+            const reportPath = `proof/${process.argv[2].split('/').pop()}`
+            const report = JSON.parse(readFileSync(reportPath, 'utf8'))
+            const high = report.Results?.flatMap((result) => result.Vulnerabilities ?? []).filter((finding) => finding.Severity === 'HIGH') ?? []
+            if (high.length !== 0) throw new Error('selected frontend/backend component image must have zero HIGH vulnerabilities')
+            NODE
           done
 
       - name: Export selected image filesystems and every layer through content guards
@@ -1272,13 +1299,13 @@ jobs:
           mkdir -p proof/base-license-evidence/debian proof/base-license-evidence/node proof/base-license-evidence/alpine
           build_evidence_container="$(docker create "$BUILD_IMAGE")"
           trap 'docker rm "$build_evidence_container" >/dev/null 2>&1 || true' EXIT
-          docker cp "$build_evidence_container:/usr/share/doc/base-files/copyright" proof/base-license-evidence/debian/base-files-13.8+deb13u6.copyright
+          docker cp "$build_evidence_container:/usr/share/doc/base-files/copyright" proof/base-license-evidence/debian/base-files-13.8+deb13u7.copyright
           docker cp "$build_evidence_container:/usr/share/doc/gcc-14-base/copyright" proof/base-license-evidence/debian/gcc-14-base-14.2.0-19.copyright
-          docker cp "$build_evidence_container:/usr/share/doc/libc6/copyright" proof/base-license-evidence/debian/libc6-2.41-12+deb13u3.copyright
-          docker cp "$build_evidence_container:/usr/share/doc/libssl3t64/copyright" proof/base-license-evidence/debian/libssl3t64-3.5.6-1~deb13u2.copyright
+          docker cp "$build_evidence_container:/usr/share/doc/libc6/copyright" proof/base-license-evidence/debian/libc6-2.41-12+deb13u4.copyright
+          docker cp "$build_evidence_container:/usr/share/doc/libssl3t64/copyright" proof/base-license-evidence/debian/libssl3t64-3.5.7-1~deb13u3.copyright
           docker cp "$build_evidence_container:/usr/share/doc/libzstd1/copyright" proof/base-license-evidence/debian/libzstd1-1.5.7+dfsg-1.copyright
-          docker cp "$build_evidence_container:/usr/share/doc/tzdata/copyright" proof/base-license-evidence/debian/tzdata-2026b-0+deb13u1.copyright
-          docker cp "$build_evidence_container:/usr/local/LICENSE" proof/base-license-evidence/node/node-24.19.0.LICENSE
+          docker cp "$build_evidence_container:/usr/share/doc/tzdata/copyright" proof/base-license-evidence/debian/tzdata-2026c-0+deb13u1.copyright
+          docker cp "$build_evidence_container:/usr/local/LICENSE" proof/base-license-evidence/node/node-24.21.0.LICENSE
           if [[ "$IMAGE_SCOPE" = frontend || "$IMAGE_SCOPE" = both ]]; then
             frontend_evidence_container="$(docker create "$FRONTEND_RUNTIME_IMAGE")"
             trap 'docker rm "$build_evidence_container" "$frontend_evidence_container" >/dev/null 2>&1 || true' EXIT
