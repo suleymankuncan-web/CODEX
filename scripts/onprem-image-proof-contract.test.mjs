@@ -9,6 +9,7 @@ const backendTsconfig = JSON.parse(readFileSync('backend/nestjs/tsconfig.onprem.
 const backendPackage = JSON.parse(readFileSync('backend/nestjs/package.json', 'utf8'))
 const frontendVite = readFileSync('admin-web/vite.config.ts', 'utf8')
 const requiredGateWorkflow = readFileSync('.github/workflows/required-release-gate.yml', 'utf8')
+const baseLicensePolicy = JSON.parse(readFileSync('infra/onprem/images/base-license-policy-v1.json', 'utf8'))
 const sameImageSmoke = workflow
   .split('- name: Start API and worker from the same backend image')[1]
   ?.split('- name: Generate SPDX SBOMs with pinned Syft')[0] ?? ''
@@ -41,6 +42,16 @@ test('ONP-1 frontend runtime pins the patched Alpine crypto and regex packages b
   assert.match(frontendDockerfile, /'libssl3=3\.5\.9-r0'/)
   assert.match(frontendDockerfile, /'pcre2=10\.49-r0'/)
   assert.match(frontendDockerfile, /USER 101\s*$/)
+})
+
+test('ONP-1 base license policy purls bind the exact declared package versions', () => {
+  for (const image of Object.values(baseLicensePolicy.images)) {
+    for (const override of image.overrides) {
+      const version = override.purl.match(/@([^?]+)(?:\?|$)/u)?.[1]
+      assert.ok(version, `${override.name} purl must include a version`)
+      assert.equal(decodeURIComponent(version), override.version, `${override.name} purl version`)
+    }
+  }
 })
 
 test('ONP-1 workflow proves read-only API and worker startup from one image', () => {
