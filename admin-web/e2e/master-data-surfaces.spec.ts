@@ -40,6 +40,28 @@ test('master data exposes the current store and personnel management surface', a
   await expectNoHorizontalOverflow(page)
 })
 
+test('personnel edit exposes all six retail positions and saves the selected position ID', async ({ page }) => {
+  let body: Record<string, unknown> | null = null
+  await page.route('**/api/integrations/personnel-master/*', async route => {
+    if (route.request().method() !== 'PATCH') return route.fallback()
+    body = route.request().postDataJSON()
+    await route.fulfill({ json: { command: { status: 'updated', message: 'Updated' }, data: { personnelMaster: {} } } })
+  })
+  await page.goto('/admin/master-data')
+  await page.getByRole('tab', { name: 'Personel', exact: true }).click()
+  await page.getByRole('button', { name: 'Pilot Personel personelini düzenle', exact: true }).click()
+  const dialog = page.getByRole('dialog', { name: 'Personel bilgilerini düzenle' })
+  await dialog.getByLabel('Pozisyon', { exact: true }).click()
+  for (const name of ['Mağaza Müdürü', 'Mağaza Müdür Yardımcısı', 'Uzman Satış Danışmanı', 'Satış Danışmanı', 'Kasa Sorumlusu', 'Depo Sorumlusu']) {
+    await expect(page.getByRole('option', { name, exact: true })).toBeVisible()
+  }
+  await expect(page.getByRole('option')).toHaveCount(6)
+  await page.getByRole('option', { name: 'Depo Sorumlusu', exact: true }).click()
+  await dialog.getByRole('button', { name: 'Değişiklikleri kaydet', exact: true }).click()
+  await expect(dialog).toBeHidden()
+  expect(body).toMatchObject({ positionId: '00000000-0000-0000-0000-000000000405', storeId: '00000000-0000-0000-0000-000000000100' })
+})
+
 test('admin shell skip link moves focus to the main landmark', async ({ page }) => {
   await page.goto('/admin/master-data')
 

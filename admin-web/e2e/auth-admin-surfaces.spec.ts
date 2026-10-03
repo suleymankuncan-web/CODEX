@@ -142,6 +142,60 @@ test('HR admin deactivates and reactivates accounts through confirmations', asyn
   expect(reactivated).toBe(true)
 })
 
+test('store manager role derives company and region from the selected store', async ({ page }) => {
+  const selectedStore = { storeId: 'store-2', storeCode: 'S2', storeName: 'Second Store', companyId: 'company-2', regionId: 'region-2', regionName: 'Ege' }
+  await page.route('**/api/auth/lookups', route => route.fulfill({ json: {
+    ...lookupsFixture, stores: [...lookupsFixture.stores, selectedStore],
+  } }))
+  const bodies: Array<Record<string, unknown>> = []
+  await page.route('**/api/auth/role-assignments', async route => {
+    if (route.request().method() !== 'POST') return route.fallback()
+    const body = route.request().postDataJSON()
+    bodies.push(body)
+    if (body.regionId !== selectedStore.regionId || body.companyId !== selectedStore.companyId) {
+      return route.fulfill({ status: 422, json: { message: 'regionId is required for store-scoped assignments' } })
+    }
+    await route.fulfill({ status: 201, json: { command: { status: 'created', message: 'Assigned' }, data: { assignment: {} } } })
+  })
+
+  await page.goto('/admin/auth')
+  await page.getByRole('button', { name: 'Rol ekle', exact: true }).click()
+  const dialog = page.getByRole('dialog', { name: 'Rol ekle', exact: true })
+  await dialog.getByLabel('Rol', { exact: true }).click()
+  await page.getByRole('option', { name: 'Mağaza müdürü', exact: true }).click()
+  await dialog.getByLabel('Rol mağazası').click()
+  await page.getByRole('option', { name: selectedStore.storeName, exact: true }).click()
+  await expect(dialog.getByLabel('Rol bölgesi')).toHaveCount(0)
+  await dialog.getByRole('button', { name: 'Rolü ata' }).click()
+
+  await expect.poll(() => bodies.length).toBe(1)
+  expect(bodies[0]).toEqual({ userId: 'user-active', roleCode: 'STORE_MANAGER', scopeType: 'store', companyId: 'company-2', regionId: 'region-2', storeId: 'store-2' })
+  await expect(dialog).toBeHidden()
+})
+
+test('store role cannot be saved when the selected store has no region', async ({ page }) => {
+  await page.route('**/api/auth/lookups', route => route.fulfill({ json: {
+    ...lookupsFixture, stores: [{ ...lookupsFixture.stores[0], regionId: '' }],
+  } }))
+  let writes = 0
+  await page.route('**/api/auth/role-assignments', route => {
+    if (route.request().method() !== 'POST') return route.fallback()
+    writes += 1
+    return route.fulfill({ status: 422, json: { message: 'Missing region' } })
+  })
+  await page.goto('/admin/auth')
+  await page.getByRole('button', { name: 'Rol ekle', exact: true }).click()
+  const dialog = page.getByRole('dialog', { name: 'Rol ekle', exact: true })
+  await dialog.getByLabel('Rol', { exact: true }).click()
+  await page.getByRole('option', { name: 'Mağaza müdürü', exact: true }).click()
+  await dialog.getByLabel('Rol mağazası').click()
+  await page.getByRole('option', { name: 'Demo Store', exact: true }).click()
+  const save = dialog.getByRole('button', { name: 'Rolü ata' })
+  await expect(save).toBeDisabled()
+  await save.dispatchEvent('click')
+  expect(writes).toBe(0)
+})
+
 test('role assignment dialog resets across users and close cycles', async ({ page }) => {
   const roleAssignmentBodies: Array<Record<string, unknown>> = []
   await page.route('**/api/auth/role-assignments', async (route) => {

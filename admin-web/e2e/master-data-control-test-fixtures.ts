@@ -194,7 +194,8 @@ const personnelMasterLookupsFixture = {
     { positionId: '00000000-0000-0000-0000-000000000401', positionCode: 'STORE_MANAGER', positionName: 'Mağaza Müdürü', isManagerial: true },
     { positionId: '00000000-0000-0000-0000-000000000402', positionCode: 'ASSISTANT_MANAGER', positionName: 'Mağaza Müdür Yardımcısı', isManagerial: true },
     { positionId: '00000000-0000-0000-0000-000000000403', positionCode: 'SENIOR_SALES_CONSULTANT', positionName: 'Uzman Satış Danışmanı', isManagerial: false },
-    { positionId: '00000000-0000-0000-0000-000000000404', positionCode: 'CASHIER_SUPERVISOR', positionName: 'Kasa Sorumlusu', isManagerial: false },
+    { positionId: '00000000-0000-0000-0000-000000000404', positionCode: 'CASHIER', positionName: 'Kasa Sorumlusu', isManagerial: false },
+    { positionId: '00000000-0000-0000-0000-000000000405', positionCode: 'WAREHOUSE_SUPERVISOR', positionName: 'Depo Sorumlusu', isManagerial: false },
   ],
   employmentStatuses: [
     { value: 'active', label: 'Aktif' },

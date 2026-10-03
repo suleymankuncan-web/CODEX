@@ -23,6 +23,27 @@ describe("personnel position catalog contract", () => {
     expect(migration).toContain("'DEMO_STORE_PERSONNEL'");
   });
 
+  it("repairs late-created company catalogs without rewriting personnel or access assignments", () => {
+    const migration = readFileSync(
+      resolve(repositoryRoot, "db/migrations/104_personnel_position_catalog_repair_v1.sql"),
+      "utf8",
+    );
+    for (const [code, label] of [
+      ["STORE_MANAGER", "Mağaza Müdürü"],
+      ["ASSISTANT_MANAGER", "Mağaza Müdür Yardımcısı"],
+      ["SENIOR_SALES_CONSULTANT", "Uzman Satış Danışmanı"],
+      ["SALES_ASSOCIATE", "Satış Danışmanı"],
+      ["CASHIER", "Kasa Sorumlusu"],
+      ["WAREHOUSE_SUPERVISOR", "Depo Sorumlusu"],
+    ]) {
+      expect(migration).toContain(`'${code}', '${label}'`);
+    }
+    expect(migration).toContain("FROM ops.company company");
+    expect(migration).toContain("ON CONFLICT (company_id, position_code)");
+    expect(migration).not.toMatch(/\b(?:DELETE|TRUNCATE)\b/i);
+    expect(migration).not.toMatch(/\b(?:UPDATE|INSERT INTO)\s+ops\.(?:employee|employee_assignment_history|user_role_assignment|user_action_store_assignment)\b/i);
+  });
+
   it("limits personnel lookup choices to the canonical catalog", () => {
     const repository = readFileSync(
       resolve(
@@ -38,6 +59,7 @@ describe("personnel position catalog contract", () => {
       "SENIOR_SALES_CONSULTANT",
       "SALES_ASSOCIATE",
       "CASHIER",
+      "WAREHOUSE_SUPERVISOR",
     ]) {
       expect(repository).toContain(`'${code}'`);
     }
