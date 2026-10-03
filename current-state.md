@@ -2,7 +2,7 @@
 
 Status: active
 Shelf: operating
-Last verified: 2026-10-02
+Last verified: 2026-10-03
 Use when: recover scope, blockers and next step
 Do not use when: inferring live deployment or selecting a branch from old PR notes
 
@@ -40,9 +40,10 @@ Do not use when: inferring live deployment or selecting a branch from old PR not
 
 ## Next
 
-Refresh Git/worktree, PR checks and runtime evidence.
-Merge is not live PASS; old plans do not authorize unrelated work. Cloudflare Workers Static Assets owns the frontend; Vercel is retired.
-[AGENTS.md](AGENTS.md#reading-map) routes task-specific reading.
+Owner: targeted local → PR/CI → merge → image proof; no local full release.
+104 repairs six positions; store roles derive hierarchy. Login unverified.
+Merge ≠ deploy. Cloudflare frontend; Vercel retired.
+[AGENTS.md](AGENTS.md#reading-map) routes work.
 
 ## Active Evidence Gates
 
