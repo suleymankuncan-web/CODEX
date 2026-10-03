@@ -1,0 +1,104 @@
+{
+  "schemaVersion": 1,
+  "baseImage": "quay.io/keycloak/keycloak:26.8.0@sha256:b0f60d489d51c5d113390bdf5461d4c06e6051be026c05549f2e1e10ec352bcc",
+  "components": [
+    {
+      "name": "quarkus-avro-spi",
+      "version": "3.40.1",
+      "purl": "pkg:maven/io.quarkus/quarkus-avro-spi@3.40.1",
+      "sourceInfo": "acquired package info from installed java archive: /opt/keycloak/lib/lib/deployment/io.quarkus.quarkus-avro-spi-3.40.1.jar",
+      "sourceJarPath": "/opt/keycloak/lib/lib/deployment/io.quarkus.quarkus-avro-spi-3.40.1.jar",
+      "sourceJarSha256": "71e627a148ed3ba8299e31cdeb0433bb497fd5cc46e8c7c1e71c4cd8438f85ef",
+      "resolvedLicense": "Apache-2.0",
+      "entries": [
+        {
+          "path": "META-INF/LICENSE",
+          "sha256": "aac73b3148f6d1d7111dbca32099f68d26c644c6813ae1e4f05f6579aa2663fe"
+        }
+      ]
+    },
+    {
+      "name": "org.osgi.namespace.extender",
+      "version": "1.0.1",
+      "purl": "pkg:maven/org.osgi/org.osgi.namespace.extender@1.0.1",
+      "sourceInfo": "acquired package info from installed java archive: /opt/keycloak/lib/lib/main/org.osgi.org.osgi.namespace.extender-1.0.1.jar",
+      "sourceJarPath": "/opt/keycloak/lib/lib/main/org.osgi.org.osgi.namespace.extender-1.0.1.jar",
+      "sourceJarSha256": "93d798bde7fa760961408c8a10a965ca7ba1dbf98a3a706c86d8290f528ad519",
+      "resolvedLicense": "Apache-2.0",
+      "entries": [
+        {
+          "path": "LICENSE",
+          "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+        }
+      ]
+    },
+    {
+      "name": "org.osgi.service.component.annotations",
+      "version": "1.5.1",
+      "purl": "pkg:maven/org.osgi/org.osgi.service.component.annotations@1.5.1",
+      "sourceInfo": "acquired package info from installed java archive: /opt/keycloak/lib/lib/main/org.osgi.org.osgi.service.component.annotations-1.5.1.jar",
+      "sourceJarPath": "/opt/keycloak/lib/lib/main/org.osgi.org.osgi.service.component.annotations-1.5.1.jar",
+      "sourceJarSha256": "42c080de090896f45d2a4e980a261d5b6addeee07ec4b201f01de95ab562b448",
+      "resolvedLicense": "Apache-2.0",
+      "entries": [
+        {
+          "path": "META-INF/LICENSE",
+          "sha256": "b40930bbcf80744c86c46a12bc9da056641d722716c378f5659b9e555ef833e1"
+        },
+        {
+          "path": "META-INF/NOTICE",
+          "sha256": "9095ce4629906ff31d2dc63d0b91194302463da2c3be0f8f714fdab77cd6b9ee"
+        }
+      ]
+    },
+    {
+      "name": "org.osgi.util.function",
+      "version": "1.0.0",
+      "purl": "pkg:maven/org.osgi/org.osgi.util.function@1.0.0",
+      "sourceInfo": "acquired package info from installed java archive: /opt/keycloak/lib/lib/main/org.osgi.org.osgi.util.function-1.0.0.jar",
+      "sourceJarPath": "/opt/keycloak/lib/lib/main/org.osgi.org.osgi.util.function-1.0.0.jar",
+      "sourceJarSha256": "4ff9329012c01a0c69c05721a6bd0b910d40a0d32108284e59c1a6215cee7a43",
+      "resolvedLicense": "Apache-2.0",
+      "entries": [
+        {
+          "path": "LICENSE",
+          "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+        }
+      ]
+    },
+    {
+      "name": "org.osgi.util.promise",
+      "version": "1.0.0",
+      "purl": "pkg:maven/org.osgi/org.osgi.util.promise@1.0.0",
+      "sourceInfo": "acquired package info from installed java archive: /opt/keycloak/lib/lib/main/org.osgi.org.osgi.util.promise-1.0.0.jar",
+      "sourceJarPath": "/opt/keycloak/lib/lib/main/org.osgi.org.osgi.util.promise-1.0.0.jar",
+      "sourceJarSha256": "7d619c925716f21ae17654529543d00ea56810784040f6ed8c6d6f901526ee67",
+      "resolvedLicense": "Apache-2.0",
+      "entries": [
+        {
+          "path": "LICENSE",
+          "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+        }
+      ]
+    },
+    {
+      "name": "osgi.annotation",
+      "version": "8.1.0",
+      "purl": "pkg:maven/org.osgi/osgi.annotation@8.1.0",
+      "sourceInfo": "acquired package info from installed java archive: /opt/keycloak/lib/lib/main/org.osgi.osgi.annotation-8.1.0.jar",
+      "sourceJarPath": "/opt/keycloak/lib/lib/main/org.osgi.osgi.annotation-8.1.0.jar",
+      "sourceJarSha256": "68afeb86a5322675d4dfe3df5863c7d8a37b34c18e3a8e41553f1ab3ac15d78f",
+      "resolvedLicense": "Apache-2.0",
+      "entries": [
+        {
+          "path": "META-INF/LICENSE",
+          "sha256": "b40930bbcf80744c86c46a12bc9da056641d722716c378f5659b9e555ef833e1"
+        },
+        {
+          "path": "META-INF/NOTICE",
+          "sha256": "9095ce4629906ff31d2dc63d0b91194302463da2c3be0f8f714fdab77cd6b9ee"
+        }
+      ]
+    }
+  ]
+}

@@ -829,6 +829,28 @@ test('ONP-3B image proof binds the exact embedded Angus JAR license evidence', (
   assert.match(workflow, /component\.license !== null \|\| component\.evidence !== null/)
 })
 
+test('ONP-3B additional license evidence is extracted from the actual rootfs before bundling and reconciliation', () => {
+  const { workflow } = input()
+  assert.match(workflow, /python3 scripts\/onprem-keycloak-embedded-license-evidence\.py[\s\S]*--policy infra\/onprem\/images\/keycloak-embedded-license-policy-v1\.json[\s\S]*--rootfs proof\/keycloak-rootfs[\s\S]*--evidence-dir proof\/keycloak-license-evidence[\s\S]*>> proof\/keycloak-license-paths\.txt/)
+  assert.match(workflow, /--keycloak-rootfs proof\/keycloak-rootfs --embedded-evidence-dir proof\/keycloak-license-evidence/)
+  const extraction = workflow.indexOf('python3 scripts/onprem-keycloak-embedded-license-evidence.py')
+  const bundle = workflow.indexOf('-cf proof/keycloak-license-evidence.tar')
+  const reconciliation = workflow.indexOf('node scripts/onprem-keycloak-license-reconciliation.mjs')
+  assert.ok(extraction >= 0 && extraction < bundle && bundle < reconciliation)
+  const policy = JSON.parse(read('infra/onprem/images/keycloak-embedded-license-policy-v1.json'))
+  assert.equal(policy.schemaVersion, 1)
+  assert.equal(policy.baseImage, KEYCLOAK_IMAGE)
+  assert.deepEqual(policy.components.map((component) => component.purl), [
+    'pkg:maven/io.quarkus/quarkus-avro-spi@3.40.1',
+    'pkg:maven/org.osgi/org.osgi.namespace.extender@1.0.1',
+    'pkg:maven/org.osgi/org.osgi.service.component.annotations@1.5.1',
+    'pkg:maven/org.osgi/org.osgi.util.function@1.0.0',
+    'pkg:maven/org.osgi/org.osgi.util.promise@1.0.0',
+    'pkg:maven/org.osgi/osgi.annotation@8.1.0',
+  ])
+  assert.ok(policy.components.every((component) => component.resolvedLicense === 'Apache-2.0'))
+})
+
 test('failed Keycloak license checks preserve only diagnostic evidence without weakening the approved gate', () => {
   const { workflow } = input()
   const diagnosticStep = workflow.split('      - name: Upload failed Keycloak license diagnostics\n')[1]?.split('      - name: ')[0]

@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import { createHash } from 'node:crypto'
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { spawnSync } from 'node:child_process'
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'node:test'
@@ -23,12 +24,156 @@ const fixturePolicy = (packageCount, overrides = {}) => ({
   maxUnresolvedCount: packageCount,
   requireFirstPartyRoot: false,
   requireExactAngusPair: false,
+  additionalEmbeddedLicenses: [],
   ...overrides,
 })
 const reconcileFixture = (options, overrides = {}) => {
   const packageCount = JSON.parse(readFileSync(options.sbom, 'utf8')).packages.length
   return reconcileKeycloakLicenses(options, fixturePolicy(packageCount, overrides))
 }
+
+test('additional license extractor rejects changed hashes, duplicate ZIP entries, and unsafe paths', () => {
+  const root = mkdtempSync(join(tmpdir(), 'onprem-keycloak-license-extractor-'))
+  try {
+    const rootfs = join(root, 'rootfs')
+    const evidence = join(root, 'evidence')
+    const jarRel = 'opt/keycloak/lib/lib/main/example-1.0.jar'
+    const jar = join(rootfs, jarRel)
+    mkdirSync(join(rootfs, 'opt/keycloak/lib/lib/main'), { recursive: true })
+    mkdirSync(evidence)
+    const makeJar = (duplicate = false) => {
+      const result = spawnSync('python3', ['-c', 'import sys,zipfile; z=zipfile.ZipFile(sys.argv[1],"w"); z.writestr("META-INF/LICENSE", "license fixture"); z.writestr("META-INF/LICENSE", "license fixture") if sys.argv[2]=="yes" else None; z.close()', jar, duplicate ? 'yes' : 'no'], { encoding: 'utf8' })
+      assert.equal(result.status, 0, result.stderr)
+    }
+    makeJar()
+    const component = {
+      name: 'example', version: '1.0', sourceJarPath: `/${jarRel}`,
+      sourceJarSha256: digest(readFileSync(jar)),
+      entries: [{ path: 'META-INF/LICENSE', sha256: digest('license fixture') }],
+    }
+    const policyPath = join(root, 'policy.json')
+    const run = (policyComponent) => {
+      writeFileSync(policyPath, JSON.stringify({ schemaVersion: 1, components: Array.isArray(policyComponent) ? policyComponent : [policyComponent] }))
+      return spawnSync('python3', ['scripts/onprem-keycloak-embedded-license-evidence.py', '--policy', policyPath, '--rootfs', rootfs, '--evidence-dir', evidence], { encoding: 'utf8' })
+    }
+    const success = run(component)
+    assert.equal(success.status, 0, success.stderr)
+    assert.equal(success.stdout.trim(), `${jarRel}!/META-INF/LICENSE`)
+    assert.equal(readFileSync(join(evidence, 'embedded-jars/example-1.0/META-INF/LICENSE'), 'utf8'), 'license fixture')
+    rmSync(join(evidence, 'embedded-jars'), { recursive: true })
+    for (const changed of [
+      { ...component, sourceJarSha256: '0'.repeat(64) },
+      { ...component, entries: [{ path: 'META-INF/LICENSE', sha256: '0'.repeat(64) }] },
+      { ...component, sourceJarPath: '/../../outside.jar' },
+      { ...component, entries: [{ path: '../../outside', sha256: digest('license fixture') }] },
+    ]) {
+      const rejected = run(changed)
+      assert.notEqual(rejected.status, 0)
+      assert.match(rejected.stderr, /mismatch|unsafe/)
+    }
+    makeJar(true)
+    const duplicate = run({ ...component, sourceJarSha256: digest(readFileSync(jar)) })
+    assert.notEqual(duplicate.status, 0)
+    assert.match(duplicate.stderr, /exactly one/)
+    makeJar()
+    const cleanComponent = { ...component, sourceJarSha256: digest(readFileSync(jar)) }
+    const outsideJar = join(root, 'outside.jar')
+    writeFileSync(outsideJar, readFileSync(jar))
+    rmSync(jar)
+    symlinkSync(outsideJar, jar)
+    const sourceEscape = run(cleanComponent)
+    assert.notEqual(sourceEscape.status, 0)
+    assert.match(sourceEscape.stderr, /unsafe source JAR/)
+    rmSync(jar)
+    writeFileSync(jar, readFileSync(outsideJar))
+    const outsideEvidence = join(root, 'outside-evidence')
+    mkdirSync(outsideEvidence)
+    symlinkSync(outsideEvidence, join(evidence, 'embedded-jars'))
+    const evidenceEscape = run(cleanComponent)
+    assert.notEqual(evidenceEscape.status, 0)
+    assert.match(evidenceEscape.stderr, /unsafe.*evidence target/)
+    rmSync(join(evidence, 'embedded-jars'))
+    const laterFailure = run([cleanComponent, { ...cleanComponent, name: 'second', sourceJarSha256: '0'.repeat(64) }])
+    assert.notEqual(laterFailure.status, 0)
+    assert.match(laterFailure.stderr, /source JAR sha256 mismatch/)
+    assert.equal(existsSync(join(evidence, 'embedded-jars')), false, 'no output is written until every component validates')
+  } finally {
+    rmSync(root, { recursive: true, force: true })
+  }
+})
+
+test('additional embedded licenses require exact package, JAR, and license bytes without relaxing the unresolved boundary', () => {
+  const root = mkdtempSync(join(tmpdir(), 'onprem-keycloak-additional-license-'))
+  try {
+    const rootfs = join(root, 'rootfs')
+    const evidenceDir = join(root, 'evidence')
+    const jarPath = '/opt/keycloak/lib/lib/main/example-1.0.jar'
+    const sourceInfo = `acquired package info from installed java archive: ${jarPath}`
+    const jarBytes = 'synthetic jar bytes'
+    const licenseBytes = 'synthetic Apache license bytes'
+    const evidencePath = join(evidenceDir, 'embedded-jars/example-1.0/META-INF/LICENSE')
+    const sourcePath = join(rootfs, jarPath.slice(1))
+    mkdirSync(join(rootfs, 'opt/keycloak/lib/lib/main'), { recursive: true })
+    mkdirSync(join(evidenceDir, 'embedded-jars/example-1.0/META-INF'), { recursive: true })
+    writeFileSync(sourcePath, jarBytes)
+    writeFileSync(evidencePath, licenseBytes)
+    const pkg = {
+      name: 'example', versionInfo: '1.0', SPDXID: 'SPDXRef-example', sourceInfo,
+      licenseConcluded: 'NOASSERTION', licenseDeclared: 'LicenseRef-Apache-License-2.0',
+      externalRefs: purl('pkg:maven/example/example@1.0'),
+    }
+    const sbom = join(root, 'sbom.json')
+    const inventory = join(root, 'inventory.json')
+    const licenseText = join(root, 'LICENSE.txt')
+    const licensePaths = join(root, 'paths.txt')
+    const licenseBundle = join(root, 'bundle.tar')
+    writeFileSync(sbom, JSON.stringify({ packages: [pkg] }))
+    writeFileSync(inventory, JSON.stringify(inventoryFor(1)))
+    writeFileSync(licenseText, 'Keycloak license evidence')
+    writeFileSync(licensePaths, `${jarPath.slice(1)}!/META-INF/LICENSE\n`)
+    writeFileSync(licenseBundle, 'synthetic bundle')
+    const component = {
+      name: pkg.name, version: pkg.versionInfo, purl: 'pkg:maven/example/example@1.0', sourceInfo,
+      sourceJarPath: jarPath, sourceJarSha256: digest(jarBytes), resolvedLicense: 'Apache-2.0',
+      entries: [{ path: 'META-INF/LICENSE', sha256: digest(licenseBytes) }],
+    }
+    const options = { sbom, inventory, licenseText, licensePaths, licenseBundle, keycloakRootfs: rootfs, embeddedEvidenceDir: evidenceDir }
+    const overrides = { maxUnresolvedCount: 0, additionalEmbeddedLicenses: [component], additionalEmbeddedLicenseBaseImage: inventoryFor(1).baseImage }
+    const receipt = reconcileFixture(options, overrides)
+    assert.equal(receipt.unresolvedCount, 0)
+    assert.equal(receipt.evidenceResolvedCount, 1)
+    assert.equal(receipt.maxUnresolvedCount, 0)
+    assert.equal(receipt.residualExternalReviewRequired, true)
+    assert.equal(receipt.components[0].license, 'Apache-2.0')
+    assert.equal(receipt.components[0].classification, 'resolved-embedded-jar')
+    assert.deepEqual(receipt.components[0].evidence.entries, component.entries)
+    for (const changed of [
+      { ...pkg, versionInfo: '1.1' }, { ...pkg, sourceInfo: 'unrelated jar' },
+      { ...pkg, externalRefs: purl('pkg:maven/other/other@1.0') },
+    ]) {
+      writeFileSync(sbom, JSON.stringify({ packages: [changed] }))
+      assert.throws(() => reconcileFixture(options, overrides), /exact additional embedded component/)
+    }
+    writeFileSync(sbom, JSON.stringify({ packages: [pkg] }))
+    assert.throws(() => reconcileFixture(options, { ...overrides, additionalEmbeddedLicenseBaseImage: 'wrong-base' }), /base image/)
+    writeFileSync(sourcePath, 'tampered jar')
+    assert.throws(() => reconcileFixture(options, overrides), /source JAR.*sha256 mismatch/)
+    writeFileSync(sourcePath, jarBytes)
+    writeFileSync(evidencePath, 'tampered license')
+    assert.throws(() => reconcileFixture(options, overrides), /license evidence.*sha256 mismatch/)
+    writeFileSync(evidencePath, licenseBytes)
+    writeFileSync(licensePaths, 'unrelated/LICENSE\n')
+    assert.throws(() => reconcileFixture(options, overrides), /license path evidence/)
+    writeFileSync(licensePaths, `${jarPath.slice(1)}!/META-INF/LICENSE\n`)
+    rmSync(evidencePath)
+    const outside = join(root, 'outside-LICENSE')
+    writeFileSync(outside, licenseBytes)
+    symlinkSync(outside, evidencePath)
+    assert.throws(() => reconcileFixture(options, overrides), /unsafe.*evidence|evidence.*unsafe/)
+  } finally {
+    rmSync(root, { recursive: true, force: true })
+  }
+})
 
 test('Keycloak license reconciliation covers every SBOM component and bundled evidence', () => {
   const root = mkdtempSync(join(tmpdir(), 'onprem-keycloak-license-'))
@@ -162,6 +307,7 @@ test('Keycloak license reconciliation binds the exact Angus virtual component to
       expectedPackageCount: 2,
       maxUnresolvedCount: 0,
       requireFirstPartyRoot: false,
+      additionalEmbeddedLicenses: [],
       sourceJarSha256: digest(jarBytes),
       licenseSha256: digest(licenseBytes),
       noticeSha256: digest(noticeBytes),

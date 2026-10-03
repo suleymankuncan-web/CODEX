@@ -630,6 +630,10 @@ jobs:
           printf '%s\n' \
             "$angus_jar_rel!/META-INF/LICENSE.md" \
             "$angus_jar_rel!/META-INF/NOTICE.md" >> proof/keycloak-license-paths.txt
+          python3 scripts/onprem-keycloak-embedded-license-evidence.py \
+            --policy infra/onprem/images/keycloak-embedded-license-policy-v1.json \
+            --rootfs proof/keycloak-rootfs --evidence-dir proof/keycloak-license-evidence \
+            >> proof/keycloak-license-paths.txt
           tar --sort=name --mtime='UTC 1970-01-01' --owner=0 --group=0 --numeric-owner \
             -cf proof/keycloak-license-evidence.tar -C proof/keycloak-license-evidence .
           keycloak_package_count="$(jq '.packages | length' proof/keycloak-sbom.spdx.json)"
@@ -641,6 +645,7 @@ jobs:
             --license-text proof/keycloak-LICENSE.txt --license-paths proof/keycloak-license-paths.txt \
             --license-bundle proof/keycloak-license-evidence.tar \
             --angus-source-jar "$angus_jar" --angus-license "$angus_license" --angus-notice "$angus_notice" \
+            --keycloak-rootfs proof/keycloak-rootfs --embedded-evidence-dir proof/keycloak-license-evidence \
             --output proof/keycloak-license-reconciliation.json
           node <<'NODE'
           const { readFileSync } = require('node:fs')
