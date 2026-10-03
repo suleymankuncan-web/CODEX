@@ -117,9 +117,13 @@ test('evidence proof rejects hash drift, traversal, and ambiguous fields', () =>
   const item = fixture({ customBase: true })
   try {
     const override = item.policy.images.backend.overrides[0]
+    const observedEvidenceSha256 = createHash('sha256').update('custom runtime notice').digest('hex')
     override.evidenceSha256 = '0'.repeat(64)
-    assert.throws(() => reconcile(item), /sha256 mismatch/i)
-    override.evidenceSha256 = createHash('sha256').update('custom runtime notice').digest('hex')
+    assert.throws(
+      () => reconcile(item),
+      (error) => error.message.includes(`observed ${observedEvidenceSha256}`) && error.message.includes(`expected ${'0'.repeat(64)}`),
+    )
+    override.evidenceSha256 = observedEvidenceSha256
     override.evidencePath = '../runtime-lib.txt'
     assert.throws(() => reconcile(item), /unsafe license evidence path/i)
     override.evidencePath = 'runtime-lib.txt'

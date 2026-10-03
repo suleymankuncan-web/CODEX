@@ -95,7 +95,7 @@ function safeEvidencePath(evidenceDirectory, relativePath, expectedSha256, ident
   if (bytes === 0) throw new Error(`empty license evidence file for ${identity}: ${relativePath}`)
   const digest = sha256(actual)
   if (digest.toLowerCase() !== String(expectedSha256).toLowerCase()) {
-    throw new Error(`license evidence sha256 mismatch for ${identity}: ${relativePath}`)
+    throw new Error(`license evidence sha256 mismatch for ${identity}: ${relativePath}; observed ${digest}; expected ${String(expectedSha256).toLowerCase()}`)
   }
   return { type: 'embedded-file', path: rel, sha256: digest, bytes }
 }
