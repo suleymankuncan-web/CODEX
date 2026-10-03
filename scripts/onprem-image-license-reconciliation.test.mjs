@@ -151,8 +151,12 @@ test('base digest, package identity, and purl drift fail closed', () => {
     item.sbom.packages[3].versionInfo = '2.0.1'
     assert.throws(() => reconcile(item), /license review|required|unused or stale|purl mismatch/i)
     item.sbom.packages[3].versionInfo = '2.0.0'
-    item.sbom.packages[3].externalRefs = purlRef('pkg:deb/synthetic/spoof@2.0.0')
-    assert.throws(() => reconcile(item), /license review|required|unused or stale|purl mismatch/i)
+    const observedPurl = 'pkg:deb/synthetic/spoof@2.0.0'
+    item.sbom.packages[3].externalRefs = purlRef(observedPurl)
+    assert.throws(
+      () => reconcile(item),
+      (error) => error.message.includes(observedPurl) && error.message.includes('pkg:deb/synthetic/runtime-lib@2.0.0'),
+    )
   } finally {
     rmSync(item.root, { recursive: true, force: true })
   }

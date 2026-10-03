@@ -189,8 +189,10 @@ export function reconcileImageLicenses({ sbom, npmInventory, policy, imageKind, 
       usedOverrides.add(overrideKey)
       return { name, version, purl, classification: 'base-runtime-override', license: override.resolvedLicense, evidence: overrideEvidence(evidenceRoot, override, identity) }
     }
-    if ([...overrides.keys()].some((key) => key.startsWith(`${name}\u0000${version}\u0000`))) {
-      throw new Error(`license policy purl mismatch for ${identity}`)
+    const matchingOverrideKeys = [...overrides.keys()].filter((key) => key.startsWith(`${name}\u0000${version}\u0000`))
+    if (matchingOverrideKeys.length > 0) {
+      const expectedPurls = matchingOverrideKeys.map((key) => key.split('\u0000')[2]).sort()
+      throw new Error(`license policy purl mismatch for ${identity}: observed ${purl}; expected ${expectedPurls.join(', ')}`)
     }
     const atoms = assertStandardExpression(declaredLicense, allowedIds, identity)
     return { name, version, purl, classification: 'base-runtime-spdx', license: declaredLicense, evidence: { type: 'spdx-expression', ids: atoms } }
