@@ -7,7 +7,7 @@ const MISSING_LICENSE = /^(?:NONE|NOASSERTION|UNKNOWN)$/i
 const LICENSE_REF = /LicenseRef-/i
 
 export const ANGUS_EMBEDDED_LICENSE_POLICY = Object.freeze({
-  expectedPackageCount: 556,
+  expectedPackageCount: 565,
   maxUnresolvedCount: 455,
   requireFirstPartyRoot: true,
   requireExactAngusPair: true,

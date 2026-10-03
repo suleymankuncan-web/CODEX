@@ -10,6 +10,11 @@ import { ANGUS_EMBEDDED_LICENSE_POLICY, reconcileKeycloakLicenses } from './onpr
 const purl = (referenceLocator) => [{ referenceType: 'purl', referenceLocator }]
 const digest = (value) => createHash('sha256').update(value).digest('hex')
 const TEST_IMAGE_ID = `sha256:${'a'.repeat(64)}`
+
+test('Keycloak 26.8.0 policy pins the observed 565-package SBOM', () => {
+  assert.equal(ANGUS_EMBEDDED_LICENSE_POLICY.expectedPackageCount, 565)
+})
+
 const inventoryFor = (packageCount) => ({ image: 'hr-axis-onprem-keycloak:proof', imageId: TEST_IMAGE_ID, baseImage: 'quay.io/keycloak/keycloak:26.8.0@sha256:base', packageCount, dataClass: 'synthetic' })
 const fixturePolicy = (packageCount, overrides = {}) => ({
   ...ANGUS_EMBEDDED_LICENSE_POLICY,
